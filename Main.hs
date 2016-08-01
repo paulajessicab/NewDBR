@@ -11,7 +11,7 @@ import Control.Monad
 import Database.HDBC.Sqlite3
 import Database.HDBC
 import System.Console.Readline --ver
-
+import Data.Char (toLower) 
 --main interactivo de http://learnyouahaskell.com/input-and-output NO
 --https://wiki.haskell.org/Tutorials/Programming_Haskell/Argument_handling NO
 -- TP lis
@@ -57,6 +57,9 @@ parseCmd ("query":newquery) repo = if (h == "SELECT" || h == "select")
                                    else do print "--Consulta invalida--" 
                                            return repo
                                         where h = head newquery
+parseCmd ("pgsize":newsz) repo = case parsePageSize (unwords newsz) of
+                                    Just x -> return (body_page_size x repo)
+                                    Nothing -> return repo
 {-}parseCmd ["show", "title"] repo = do print (get_title repo)
                                      return repo
 parseCmd ["show", "title", "style"] repo = do print (get_title_stl repo)
@@ -69,6 +72,17 @@ parseCmd ["exit"] repo = do disconnect (get_connection repo)
                             exitWith ExitSuccess
 parseCmd _ repo = do print "Comando no conocido"--exitWith (ExitFailure 1) --error y seguir
                      return repo
+
+parsePageSize :: String -> Maybe PageSize
+parsePageSize xs
+        | sz == "a4_h"    = Just A4_H
+        | sz == "a4_v"    = Just A4_V
+        | sz == "a4"      = Just A4_V
+        | sz == "legal_h" = Just Legal_H
+        | sz == "legal_v" = Just Legal_V
+        | sz == "legal"   = Just Legal_V
+        | otherwise     = Nothing
+        where sz = map toLower xs
 
 --Font Parser VER
 {-parseFont :: String -> Font

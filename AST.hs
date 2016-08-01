@@ -31,7 +31,9 @@ data Position = PCenter
               | PJustified
 	deriving Show
 
-data PageSize = A4
-              | Legal
+data PageSize = A4_V
+              | A4_H
+              | Legal_V
+              | Legal_H
               | Other Int Int --width, height
     deriving Show

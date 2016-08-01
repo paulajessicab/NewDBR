@@ -31,7 +31,7 @@ initTitle :: Title
 initTitle = T "Nuevo Reporte" initTStyle
 
 initBStyle :: BStyle
-initBStyle = BStyle A4_H defaultFont
+initBStyle = BStyle A4_V defaultFont
 
 initRepo :: Connection -> Repo
 initRepo conn = R initTitle "" initBStyle conn
@@ -43,7 +43,7 @@ initRepo conn = R initTitle "" initBStyle conn
 -- Función generadora:
 -- Realiza la consulta, arregla los datos y "genera el pdf"
 generate :: Repo -> IO()
-generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont [] --ver error de consulta
+generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont [] --ver error de consulta y consulta vacia
                                      
                                           let pdfFileName = (get_title repo) ++ ".pdf"
                                           let documentInfo = standardDocInfo 
@@ -155,8 +155,8 @@ get_psize :: Repo -> PageSize
 get_psize (R _ _ (BStyle psz _) _) = psz
 
 toPageSize :: PageSize -> PDFRect
-toPageSize A4_H    = PDFRect 0 0 596 841 --10 = 4 mm --100 = 35mm
-toPageSize Legal_H   = PDFRect 0 0 216 356 --acomodar
+toPageSize A4_V    = PDFRect 0 0 596 841 --10 = 4 mm --100 = 35mm
+toPageSize Legal_V   = PDFRect 0 0 216 356 --acomodar
 toPageSize (Other x y) = PDFRect 0 0 x y
 
 get_body_font :: Repo -> PDFFont
