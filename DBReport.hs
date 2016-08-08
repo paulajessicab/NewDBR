@@ -10,19 +10,25 @@ import Database.HDBC.Sqlite3
 import Control.Monad
 import Data.List
 import System.IO
+import System.Cmd
 --PDF
-import Graphics.PDF
-import Graphics.PDF.Typesetting
+--import Graphics.PDF
+--import Graphics.PDF.Typesetting
 --
 import Control.Monad.State
 import Data.Bool
 import Control.Exception
 import Data.Maybe
+--latex
+import Text.LaTeX
+import Text.LaTeX.Packages.Geometry
+import Text.LaTeX.Packages.Inputenc
+
 --import Data.Either
 
 {-////////////////| Inicialización |\\\\\\\\\\\\\\\\-}
 defaultFont :: PDFFont
-defaultFont = PDFFont Times_Roman 10
+defaultFont = PDFFont "Times_Roman" 10
 
 initTStyle :: TStyle
 initTStyle = TStyle defaultFont PCenter
@@ -31,7 +37,7 @@ initTitle :: Title
 initTitle = T "Nuevo Reporte" initTStyle
 
 initBStyle :: BStyle
-initBStyle = BStyle A4_V defaultFont
+initBStyle = BStyle A4 defaultFont
 
 initRepo :: Connection -> Repo
 initRepo conn = R initTitle "" initBStyle conn
@@ -42,7 +48,7 @@ initRepo conn = R initTitle "" initBStyle conn
 
 -- Función generadora:
 -- Realiza la consulta, arregla los datos y "genera el pdf"
-generate :: Repo -> IO()
+{-generate :: Repo -> IO()
 generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont [] --ver error de consulta y consulta vacia
                                      
                                           let pdfFileName = (get_title repo) ++ ".pdf"
@@ -64,12 +70,40 @@ generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont [] --ver e
                                                  leading $ getHeight pdfFont
                                                  displayText $ toPDFString " "
 --gen content
+-}
+generate :: Repo -> IO()
+generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont []
+                                          execLaTeXT (simple repo xs) >>= renderFile (get_title repo ++ ".tex")
+                                          
+                                          
+simple :: Monad m => Repo -> [[Maybe String]] -> LaTeXT m ()
+simple repo xs = do
+ thePreamble repo
+ document $ theBody xs
+ 
+thePreamble :: Monad m => Repo -> LaTeXT m ()
+thePreamble repo = do
+    documentclass [] article
+    usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
+    importGeometry [GPaper $ get_psize repo]
+    date ""
+    -- author "Paula Borrero" booleano para autor?
+    -- fecha bool?
+    title $ fromString $ get_title repo
 
-gen []  = do displayText $ toPDFString " "
-gen xss = do displayText $ toPDFString $ head xss
-             startNewLine
-             gen $ tail xss
+
+theBody :: Monad m => [[Maybe String]] -> LaTeXT m ()
+theBody xs = do maketitle
+                --section "hello"
+                gen $ reArrange $ padAll $ fillMatrix $ xs
             
+gen :: Monad m => [String] -> LaTeXT m ()               
+gen []  = do fromString " "
+gen [x] = do fromString x
+gen (xs:xss) = do fromString xs
+                  newline
+                  gen xss
+
 -- Funciones de relleno
 padAll :: [([String],Int)] -> [[String]]
 padAll xss = map (\(xs,n) -> map (pad n) xs) xss
@@ -118,11 +152,11 @@ conv x = fromMaybe "Null" x
 
 {----------------Título----------------}
 --Cambia el contenido del título
-title :: String -> Repo -> Repo
-title newttl (R (T ttl stl) cont bstl conn) = R (T newttl stl) cont bstl conn
+newtitle :: String -> Repo -> Repo
+newtitle newttl (R (T ttl stl) cont bstl conn) = R (T newttl stl) cont bstl conn
 
 --Cambia todo el estilo del título
-title_stl :: FontName -> Int -> Position -> Repo -> Repo
+title_stl :: String -> Int -> Position -> Repo -> Repo
 title_stl font size pos (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
                                                             where stl' = change_tstl font size pos stl    
 {--------------------------------------}
@@ -133,12 +167,12 @@ content :: String -> Repo -> Repo
 content cont' (R ttl cont bstl conn) = R ttl cont' bstl conn
 
 --Cambia fuente del cuerpo
-body_font :: FontName -> Int -> Repo -> Repo
+body_font :: String -> Int -> Repo -> Repo
 body_font font size (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz (PDFFont font size)) conn
 
 --Cambia tamaño de página
-body_page_size :: PageSize -> Repo -> Repo
-body_page_size psz' (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz' bfont) conn
+pagesize :: PaperType -> Repo -> Repo
+pagesize psz' (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz' bfont) conn
 {--------------------------------------}
 
 {-////////////////| Auxiliares |\\\\\\\\\\\\\\\\-}
@@ -151,17 +185,17 @@ get_title (R (T ttl _) _ _ _) = ttl
 get_title_font :: Repo -> PDFFont
 get_title_font (R (T _ (TStyle tfont _)) _ _ _) = tfont
  
-get_psize :: Repo -> PageSize
+get_psize :: Repo -> PaperType
 get_psize (R _ _ (BStyle psz _) _) = psz
-
+{-
 toPageSize :: PageSize -> PDFRect
 toPageSize A4_V    = PDFRect 0 0 596 841 --10 = 4 mm --100 = 35mm
 toPageSize Legal_V   = PDFRect 0 0 216 356 --acomodar
 toPageSize (Other x y) = PDFRect 0 0 x y
-
+-}
 get_body_font :: Repo -> PDFFont
 get_body_font (R _ _ (BStyle _ bfont) _) = bfont
 
-change_tstl :: FontName -> Int -> Position -> TStyle -> TStyle
+change_tstl :: String -> Int -> Position -> TStyle -> TStyle
 change_tstl font size pos _ = TStyle (PDFFont font size) pos
 

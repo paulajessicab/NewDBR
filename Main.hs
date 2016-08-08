@@ -12,15 +12,32 @@ import Database.HDBC.Sqlite3
 import Database.HDBC
 import System.Console.Readline --ver
 import Data.Char (toLower) 
+import System.Process
+import Text.LaTeX.Base.Commands(PaperType) --Oculta los valores???
+--TODO
+-- Ver excepciones sqlite!!
+-- Usar tablas!!
+-- Terminar landscape, margenes y encabezados/pies
+-- Sacar salida de pdflatex
+-- Ver que pagestyle queda mejor
+-- Tamaño de fuentes con relsize?
+
+--Fuentes
 --main interactivo de http://learnyouahaskell.com/input-and-output NO
 --https://wiki.haskell.org/Tutorials/Programming_Haskell/Argument_handling NO
 -- TP lis
---Ver Errores
+--https://en.wikibooks.org/wiki/LaTeX/Tables
+-- documento geometry
+-- http://hackage.haskell.org/package/HaTeX-3.17.0.2/docs/src/Text-LaTeX-Base-Commands.html#ClassOption  -- VER: Special Tables
+
+
+
 
            
 main = do args <- getArgs
           conn <- parse' args
           let newRepo = initRepo conn
+          hSetBuffering stdout NoBuffering --ver
           mainloop newRepo
 
 --Parser de Argumentos
@@ -41,56 +58,85 @@ mainloop newRepo = do input <- readline prompt
                             Just c -> do addHistory c --historial de comandos
                                          if (c == "generate")
                                          then do generate newRepo
+                                                 --runCommand "pdflatex jajaja.tex"
+                                                 del <- rawSystem "pdflatex" [name++".tex"] -- "> /dev/null 2>&1"
+                                                 rawSystem "rm" [name++".tex", name++".log", name++".aux"] --ver que llegue
                                                  mainloop newRepo
                                          else do newRepo' <- parseCmd (words c) newRepo
                                                  mainloop newRepo'
+                                         where name = get_title newRepo
                             Nothing -> exitWith (ExitFailure 1) ---ver error
 
 
                  
---Parser de Comandos                      
-
+{-////////////////| Parser de Comandos |\\\\\\\\\\\\\\\\-}                     
+--Cambiar formato
 parseCmd :: [String] -> Repo -> IO Repo
-parseCmd ("title":newttl) repo = return (title (unwords newttl) repo)
+parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
 parseCmd ("query":newquery) repo = if (h == "SELECT" || h == "select")
                                    then do return (content (unwords newquery) repo)
-                                   else do print "--Consulta invalida--" 
+                                   else do print "--Consulta invalida--"
                                            return repo
                                         where h = head newquery
-parseCmd ("pgsize":newsz) repo = case parsePageSize (unwords newsz) of
-                                    Just x -> return (body_page_size x repo)
-                                    Nothing -> return repo
-{-}parseCmd ["show", "title"] repo = do print (get_title repo)
+parseCmd ("pagesize":newsize) repo = case parsePageSize (unwords newsize) of
+                                        Just x -> return (pagesize x repo)
+                                        Nothing -> do print "--Dimensiones de pagina no validas--"
+                                                      print "--Las soportados son ..." --TODO
+                                                      return repo
+--Obtener datos
+parseCmd ["show", "title"] repo = do print (get_title repo)
                                      return repo
-parseCmd ["show", "title", "style"] repo = do print (get_title_stl repo)
-                                              return repo
-parseCmd ["show", "body", "style"] repo = do print (get_body_stl repo)
-                                             return repo
-parseCmd ["show", "columns"] repo = do print (get_columns repo)
-                                       return repo -}
+--Salida y error
 parseCmd ["exit"] repo = do disconnect (get_connection repo)
                             exitWith ExitSuccess
-parseCmd _ repo = do print "Comando no conocido"--exitWith (ExitFailure 1) --error y seguir
+parseCmd _ repo = do print "Comando no conocido"
                      return repo
+--Obtener datos
+--parseCmd ["show", "title", "style"] repo = do print (get_title_stl repo)
+--                                              return repo
+--parseCmd ["show", "body", "style"] repo = do print (get_body_stl repo)
+--                                             return repo
+--parseCmd ["show", "columns"] repo = do print (get_columns repo)
+--                                       return repo 
+{-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
 
-parsePageSize :: String -> Maybe PageSize
-parsePageSize xs
-        | sz == "a4_h"    = Just A4_H
-        | sz == "a4_v"    = Just A4_V
-        | sz == "a4"      = Just A4_V
-        | sz == "legal_h" = Just Legal_H
-        | sz == "legal_v" = Just Legal_V
-        | sz == "legal"   = Just Legal_V
-        | otherwise     = Nothing
-        where sz = map toLower xs
 
+{-////////////////| Parsers Auxiliares |\\\\\\\\\\\\\\\\-}    
+   
+-- Parser para tamaños de papel
+-- TODO: Tamaños arbitrarios con GPaperHeight y GPaperWidth
+parsePageSize :: String -> Maybe PaperType
+parsePageSize sz = case (map toLower sz) of
+                      {- "a0" -> Just A0	 
+                       "a1" -> Just A1	 
+                       "a2" -> Just A2
+                       "a3" -> Just A3	 
+                       "a4" -> Just A4	 
+                       "a5" -> Just A5	 
+                       "a6" -> Just A6	 
+                       "b0" -> Just B0	 
+                       "b1" -> Just B1	 
+                       "b2" -> Just B2	 
+                       "b3" -> Just B3	 
+                       "b4" -> Just B4	 
+                       "b5" -> Just B5	 
+                       "b6" -> Just B6	 
+                       "letter" -> Just Letter	 
+                       "executive" -> Just Executive	 
+                       "legal" -> Just Legal-}
+                       otherwise -> Nothing
+
+{-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
+
+{-
 --Font Parser VER
-{-parseFont :: String -> Font
+parseFont :: String -> Font
 parseFont "Arial" = Arial
 parseFont "arial" = Arial
 parseFont "Times" = Times
 parseFont "times" = Times
--}
+
 --Position Parser VER
 parsePosition :: String -> Position
 parsePosition _ = PCenter
+-}
