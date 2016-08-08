@@ -20,19 +20,19 @@ data Repo = R Title Content BStyle Connection --Estructura del reporte
 data Title = T Content TStyle
 
 data TStyle = TStyle PDFFont Position --PDFFont = PDFFont FontName Size
-	deriving Show
+        deriving Show
 
 data PDFFont = PDFFont String Int
     deriving Show
 
 data BStyle = BStyle PaperType PDFFont -- agregar Margins Header FooterBool Landscape
-	deriving Show
+    deriving Show
 
 data Position = PCenter
               | PLeft
               | PRight
               | PJustified
-	deriving Show
+        deriving Show
 
 {-PaperType 
 

@@ -10,7 +10,7 @@ import Database.HDBC.Sqlite3
 import Control.Monad
 import Data.List
 import System.IO
-import System.Cmd
+import System.Process
 --PDF
 --import Graphics.PDF
 --import Graphics.PDF.Typesetting
