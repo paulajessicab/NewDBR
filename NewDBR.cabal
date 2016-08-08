@@ -2,9 +2,10 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                NewDBR
-version:             0.1.0.0
--- synopsis:            
+version:             0.4
+synopsis:            SQLite3 database report generator
 -- description:         
+homepage:            https://github.com/paulajessicab/NewDBR.git
 license:             PublicDomain
 license-file:        LICENSE
 author:              Paula Borrero
@@ -15,6 +16,6 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable NewDBR
-  -- main-is:             
+  -- main-is: Main.hs
   -- other-modules:       
-  build-depends:       base ==4.6.*, HDBC ==2.4.*, HDBC-sqlite3 ==2.3.*, HPDF ==1.4.*, directory ==1.2.*, readline ==1.0.*, mtl ==2.2.*
+  build-depends:       base ==4.6.*, HDBC ==2.4.*, HDBC-sqlite3 ==2.3.*, directory ==1.2.*, readline ==1.0.*, process ==1.1.*, mtl ==2.2.*, HaTeX ==3.17.*
