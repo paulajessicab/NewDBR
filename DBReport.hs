@@ -19,10 +19,14 @@ import Control.Monad.State
 import Data.Bool
 import Control.Exception
 import Data.Maybe
+import Data.Matrix
+import qualified Data.Text as T
 --latex
 import Text.LaTeX
 import Text.LaTeX.Packages.Geometry
 import Text.LaTeX.Packages.Inputenc
+import Text.LaTeX.Packages.AMSMath
+--import Text.LaTeX.Base.Texy
 
 --import Data.Either
 
@@ -45,32 +49,6 @@ initRepo conn = R initTitle "" initBStyle conn
 
 
 {-/////////////////| Ejecución |\\\\\\\\\\\\\\\\\-}
-
--- Función generadora:
--- Realiza la consulta, arregla los datos y "genera el pdf"
-{-generate :: Repo -> IO()
-generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont [] --ver error de consulta y consulta vacia
-                                     
-                                          let pdfFileName = (get_title repo) ++ ".pdf"
-                                          let documentInfo = standardDocInfo 
-                                          let pageSize = toPageSize $ get_psize repo
-                                          let pdfFont = get_body_font repo
-                                          let titleFont = get_title_font repo  
-                                          let content = reArrange $ padAll $ fillMatrix $ xs
-                                         
-                                          printMatrix $ padAll $ fillMatrix $ xs
-                                        
-                                          runPdf pdfFileName documentInfo pageSize $ do
-                                           page <- addPage Nothing
-                                           drawWithPage page $ do 
-                                              drawText $ do
-                                                 setFont pdfFont
-                                                 wordSpace $ getDescent pdfFont
-                                                 textStart 2 (297.0 - 2* (getDescent pdfFont))
-                                                 leading $ getHeight pdfFont
-                                                 displayText $ toPDFString " "
---gen content
--}
 generate :: Repo -> IO()
 generate repo@(R ttl cont bstl conn) = do xs <- nQuickQuery conn cont []
                                           execLaTeXT (simple repo xs) >>= renderFile (get_title repo ++ ".tex")
@@ -83,8 +61,9 @@ simple repo xs = do
  
 thePreamble :: Monad m => Repo -> LaTeXT m ()
 thePreamble repo = do
-    documentclass [] article
+    documentclass [] article --aca va landscape
     usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
+    usepackage [] amsmath
     importGeometry [GPaper $ get_psize repo]
     date ""
     -- author "Paula Borrero" booleano para autor?
@@ -94,58 +73,23 @@ thePreamble repo = do
 
 theBody :: Monad m => [[Maybe String]] -> LaTeXT m ()
 theBody xs = do maketitle
-                --section "hello"
-                gen $ reArrange $ padAll $ fillMatrix $ xs
-            
-gen :: Monad m => [String] -> LaTeXT m ()               
-gen []  = do fromString " "
-gen [x] = do fromString x
-gen (xs:xss) = do fromString xs
-                  newline
-                  gen xss
+                theTable (map (fromString.(T.unpack)) $ head fill) m 30
+                    where fill = fillMatrix xs 
+                          m = (fromLists $ tail fill)
+                      
+--theTable :: Monad m => [String] -> Matrix Text -> Int -> LaTeXT m ()
+theTable colsname xs n = if nrows xs <= n
+                         then do center $ matrixTabular colsname xs
+                         else do center $ matrixTabular colsname $ submatrix 1 n 1 (ncols xs) xs
+                                 theTable colsname (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) n
 
--- Funciones de relleno
-padAll :: [([String],Int)] -> [[String]]
-padAll xss = map (\(xs,n) -> map (pad n) xs) xss
-
---https://gist.github.com/hanshoglund/5941143
-pad :: Int -> String -> String
-pad n s | length s < n = s ++ replicate (n - length s) ' '
-        | otherwise    = s
-
---Función de debug -- Transpone nuevamente la matriz y la imprime
-printMatrix :: [[String]] -> IO ()
-printMatrix [] = putStr ""
-printMatrix ([]:xs) = putStr ""
-printMatrix xss = do putStrLn $ unwords h
-                     printMatrix $ map tail xss
-                      where h = map head xss
-
-reArrange :: [[String]] -> [String]
-reArrange ([]:xss) = []
-reArrange xss = ((unwords h):(reArrange $ map tail $ xss))
-                        where h = map head xss
-
-
---Se traspone la matriz y se guarda el ancho de la cadena máxima de cada columna                            
-fillMatrix :: [[Maybe String]] -> [([String],Int)]
-fillMatrix [] = []
-fillMatrix ([]:xs) = []
-fillMatrix xss = case map tail xss of
-                    [] -> [runState (convRow' (map head xss)) 0]
-                    _  ->  (runState (convRow' (map head xss)) 0) : (fillMatrix (map tail xss))
- 
-convRow' :: [Maybe String] -> State Int [String]
-convRow' []     = return []
-convRow' [x]    = do curr <- get
-                     let y = conv x
-                     if (length y > curr) then do {put (length y); return [y]} else return [y]
-convRow' (x:xs) = do curr <- get
-                     let y = conv x
-                     if (length y > curr) then do {put (length y); ys <- (convRow' xs); return (y:ys)} else do {ys <- (convRow' xs); return (y:ys)}
+fillMatrix :: [[Maybe String]] -> [[Text]]
+fillMatrix [] = [] 
+fillMatrix (xs:xss) = (map ((T.pack).conv) xs):(fillMatrix xss)
 
 conv :: Maybe String -> String
 conv x = fromMaybe "Null" x
+
 {-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
 
 {-////////////////| Modificación |\\\\\\\\\\\\\\\\-}
