@@ -6,11 +6,11 @@ import Data.Maybe
 
 --Versión modificada de quickQuery para incluir los nombres de columnas
 
-nQuickQuery :: IConnection conn => conn -> String -> [SqlValue] -> IO [[Maybe String]]
+nQuickQuery :: IConnection conn => conn -> String -> [SqlValue] -> IO (Maybe [[Maybe String]])
 nQuickQuery conn qrystr args =
     do sth   <- prepare conn qrystr
        _     <- execute sth args
        res   <- sFetchAllRows' sth
        names <- getColumnNames sth
-       return $ (map (\str -> Just str) names):res
+       return $ Just $ (map (\str -> Just str) names):res
        

@@ -58,9 +58,6 @@ mainloop newRepo = do input <- readline prompt
                             Just c -> do addHistory c --historial de comandos
                                          if (c == "generate")
                                          then do generate newRepo
-                                                 --runCommand "pdflatex jajaja.tex"
-                                                 del <- rawSystem "pdflatex" [name++".tex"] -- "> /dev/null 2>&1"
-                                                 rawSystem "rm" [name++".tex", name++".log", name++".aux"] --ver que llegue
                                                  mainloop newRepo
                                          else do newRepo' <- parseCmd (words c) newRepo
                                                  mainloop newRepo'
@@ -72,7 +69,8 @@ mainloop newRepo = do input <- readline prompt
 {-////////////////| Parser de Comandos |\\\\\\\\\\\\\\\\-}                     
 --Cambiar formato
 parseCmd :: [String] -> Repo -> IO Repo
-parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
+parseCmd = undefined
+{-parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
 parseCmd ("query":newquery) repo = if (h == "SELECT" || h == "select")
                                    then do return (content (unwords newquery) repo)
                                    else do print "--Consulta invalida--"
@@ -91,6 +89,7 @@ parseCmd ["exit"] repo = do disconnect (get_connection repo)
                             exitWith ExitSuccess
 parseCmd _ repo = do print "Comando no conocido"
                      return repo
+-}         
 --Obtener datos
 --parseCmd ["show", "title", "style"] repo = do print (get_title_stl repo)
 --                                              return repo
