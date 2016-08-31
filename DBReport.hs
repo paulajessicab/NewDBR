@@ -30,9 +30,16 @@ import Text.LaTeX.Packages.AMSMath
 
 --import Data.Either
 
+{- TODO
+arreglar fuentes contenido tabla
+arreglar estilo tabla
+hacer parser
+arreglar tamaños segun fuentes (hacer funcion que evalue el numero)
+-}
+
 {-////////////////| Inicialización |\\\\\\\\\\\\\\\\-}
 defaultFont :: PDFFont
-defaultFont = PDFFont Roman Normalsize []
+defaultFont = PDFFont Mono Huge2 [Underline]
 
 initTStyle :: TStyle
 initTStyle = TStyle defaultFont HCenter
@@ -73,25 +80,30 @@ simple repo xs = do
  
 thePreamble :: Monad m => Repo -> LaTeXT m ()
 thePreamble repo = do
-    documentclass [NoTitlePage] article --aca va landscape
+    if lands_bool repo 
+    then do documentclass [NoTitlePage, Landscape] article --arreglar filas
+    else do documentclass [NoTitlePage] article
     usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
     usepackage [] amsmath
     importGeometry [GPaper $ get_psize repo]
     date ""
     -- author "Paula Borrero" booleano para autor?
     -- fecha bool?
-    title $ fromString $ get_title repo
-
+    --title $ get_Tfsize repo $ fromString $ get_title repo
+    title $ fstyle $ fromString $ get_title repo
+        where fstyle = format_title $ get_title_font $ repo
 
 theBody :: Monad m => Repo -> [[Maybe String]] -> LaTeXT m ()
-theBody repo xs = do maketitle
-                     theTable (map (fromString.(T.unpack)) $ head fill) m 30
-                        where fill = fillMatrix xs 
-                              m    = (fromLists $ tail fill)
+theBody repo xs | title_bool repo = do maketitle
+                                       print_table
+                | otherwise = do print_table
+                where print_table = theTable (map (fromString.(T.unpack)) $ head fill) m 30
+                      fill        = fillMatrix xs 
+                      m           = (fromLists $ tail fill)
                       
 --theTable :: Monad m => [String] -> Matrix Text -> Int -> LaTeXT m ()
 theTable colsname xs n = if nrows xs <= n
-                         then do center $ matrixTabular colsname xs
+                         then do center $ matrixTabular (map underline colsname) xs --acomodar
                          else do center $ matrixTabular colsname $ submatrix 1 n 1 (ncols xs) xs
                                  theTable colsname (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) n
 
@@ -117,11 +129,11 @@ title_stl font size pos (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bst
                                                             where stl' = change_tstl font size pos stl    
 {--------------------------------------}
 
-{----------------Cuerpo----------------}
+{----------------Cuerpo----------------}-}
 --Cambia el contenido del cuerpo
 content :: String -> Repo -> Repo
-content cont' (R ttl cont bstl conn) = R ttl cont' bstl conn
-
+content query' (R ttl (C query ts) bstl conn) = R ttl (C query' ts) bstl conn
+{-
 --Cambia fuente del cuerpo
 body_font :: String -> Int -> Repo -> Repo
 body_font font size (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz (PDFFont font size)) conn
@@ -157,7 +169,55 @@ get_pfont (R _ _ (PStyle _ font _ _) _) = font
 get_query :: Repo -> String
 get_query (R _ (C cont _) _ _) = cont
 
+
+--get_font_size :: PDFFont
+--get_font_size  = to_fsize fs
+--format_title :: LaTeXC l => Repo -> l -> l
+format_title (PDFFont ff fs xs) = (to_ffam ff).(to_fsize fs).(to_fstyles xs)
+
+--to_fsize :: LaTeXC l => Repo -> l -> l
+
+
+{-
+get_Tfsize repo
+
+-}
+title_bool :: Repo -> Bool
+title_bool (R _ _ (PStyle _ _ _ st) _)  = st
+
+lands_bool :: Repo -> Bool
+lands_bool (R _ _ (PStyle _ _ land _) _)  = land
 {-
 change_tstl :: String -> Int -> Position -> TStyle -> TStyle
 change_tstl font size pos _ = TStyle (PDFFont font size) pos
 -}
+to_fsize size = case size of
+                    Tiny       -> tiny
+                    Scriptsize -> scriptsize
+                    Footnote   -> footnotesize
+                    Small      -> small
+                    Normalsize -> normalsize
+                    Large      -> large
+                    Large2     -> large2
+                    Large3     -> large3
+                    Huge       -> huge
+                    Huge2      -> huge2
+
+to_ffam family = case family of
+                   Roman     -> textrm
+                   SansSerif -> textsf
+                   Mono      -> texttt
+
+to_fstyles []     = textnormal
+to_fstyles [x]      = to_fsty x
+to_fstyles (x:xs) = (to_fsty x).(to_fstyles xs)
+                   
+to_fsty style = case style of
+                   Normal    -> textnormal
+                   Medium    -> textmd
+                   Bold      -> textbf
+                   Italic    -> textit
+                   SmallCaps -> textsc
+                   Slanted   -> textsl
+                   Upright   -> textup
+                   Underline -> underline

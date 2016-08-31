@@ -69,14 +69,18 @@ mainloop newRepo = do input <- readline prompt
 {-////////////////| Parser de Comandos |\\\\\\\\\\\\\\\\-}                     
 --Cambiar formato
 parseCmd :: [String] -> Repo -> IO Repo
-parseCmd = undefined
-{-parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
+--parseCmd = undefined
+parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
 parseCmd ("query":newquery) repo = if (h == "SELECT" || h == "select")
                                    then do return (content (unwords newquery) repo)
                                    else do print "--Consulta invalida--"
                                            return repo
                                         where h = head newquery
-parseCmd ("pagesize":newsize) repo = case parsePageSize (unwords newsize) of
+parseCmd ["exit"] repo = do disconnect (get_connection repo)
+                            exitWith ExitSuccess
+parseCmd _ repo = do print "Comando no conocido"
+                     return repo
+{-parseCmd ("pagesize":newsize) repo = case parsePageSize (unwords newsize) of
                                         Just x -> return (pagesize x repo)
                                         Nothing -> do print "--Dimensiones de pagina no validas--"
                                                       print "--Las soportados son ..." --TODO
