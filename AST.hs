@@ -18,19 +18,20 @@ data Repo = R Title Content PStyle Connection --Estructura del reporte
 
 data Title = T String TStyle
 
-data Content = C String TableStyle
+data Content = C String TableStyle PDFFont PDFFont
 
-data TableStyle = Style1 --Todos los bordes
-                | Style2 --Bordes externos y horizontales
-                | Style3 --Solo bordes horizontales
-                | Style4 --Sin bordes, colores alternados --ver
-                | Style5 --Sin bordes ni colores
-                deriving Show
+--ExternalV,ExternalH, InternalV, InternalH
+type TableStyle = (Vert,Bool,Vert,Bool)
+
+data Vert = None
+          | Vert
+          | DVert
+    deriving Show
 
 data TStyle = TStyle PDFFont HPos --PDFFont = PDFFont FontName Size
     deriving Show
         
-data PStyle = PStyle PaperType PDFFont Landscape ShowTitle-- agregar Margins Header FooterBool Landscape TableStyle
+data PStyle = PStyle PaperType Landscape ShowTitle-- agregar Margins Header FooterBool Landscape TableStyle
     deriving Show
 
 type Landscape = Bool

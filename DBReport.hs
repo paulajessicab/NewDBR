@@ -11,10 +11,7 @@ import Control.Monad
 import Data.List
 import System.IO
 import System.Process
---PDF
---import Graphics.PDF
---import Graphics.PDF.Typesetting
---
+
 import Control.Monad.State
 import Data.Bool
 import Control.Exception
@@ -26,20 +23,17 @@ import Text.LaTeX
 import Text.LaTeX.Packages.Geometry
 import Text.LaTeX.Packages.Inputenc
 import Text.LaTeX.Packages.AMSMath
---import Text.LaTeX.Base.Texy
-
---import Data.Either
 
 {- TODO
-arreglar fuentes contenido tabla
-arreglar estilo tabla
 hacer parser
 arreglar tamaños segun fuentes (hacer funcion que evalue el numero)
+arreglar margenes
+doble linea horizontal??
 -}
 
 {-////////////////| Inicialización |\\\\\\\\\\\\\\\\-}
 defaultFont :: PDFFont
-defaultFont = PDFFont Mono Huge2 [Underline]
+defaultFont = PDFFont Mono Normalsize [Underline]
 
 initTStyle :: TStyle
 initTStyle = TStyle defaultFont HCenter
@@ -48,19 +42,17 @@ initTitle :: Title
 initTitle = T "Nuevo Reporte" initTStyle
 
 initPStyle :: PStyle
-initPStyle = PStyle A4 defaultFont False True
+initPStyle = PStyle A4 False True
+
+initTableStyle :: TableStyle
+initTableStyle = (Vert,True,DVert,True)
 
 initRepo :: Connection -> Repo
-initRepo conn = R initTitle (C "" Style1) initPStyle conn
+initRepo conn = R initTitle (C "" initTableStyle defaultFont defaultFont) initPStyle conn
 {-\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////-}
 
 
-{-/////////////////| Ejecución |\\\\\\\\\\\\\\\\\-}
-{-generate :: Repo -> IO()
-generate repo@(R ttl cont pstl conn) = do xs <- nQuickQuery conn cont []
-                                          execLaTeXT (simple repo xs) >>= renderFile (get_title repo ++ ".tex")
-                                          
--}                                          
+{-/////////////////| Ejecución |\\\\\\\\\\\\\\\\\-}                                      
 generate :: Repo -> IO()
 generate repo@(R _ _ _ conn) = 
     do xs <- catchSql query (\_ -> return Nothing)
@@ -91,25 +83,32 @@ thePreamble repo = do
     -- fecha bool?
     --title $ get_Tfsize repo $ fromString $ get_title repo
     title $ fstyle $ fromString $ get_title repo
-        where fstyle = format_title $ get_title_font $ repo
+        where fstyle = format $ get_title_font $ repo
 
 theBody :: Monad m => Repo -> [[Maybe String]] -> LaTeXT m ()
 theBody repo xs | title_bool repo = do maketitle
                                        print_table
                 | otherwise = do print_table
-                where print_table = theTable (map (fromString.(T.unpack)) $ head fill) m 30
+                where --print_table = theTable (map (fromString.(T.unpack)) $ head fill) m 30
+                      print_table = theTable colnames m repo
+                      colnames    = map fromString $ head fill
                       fill        = fillMatrix xs 
                       m           = (fromLists $ tail fill)
                       
---theTable :: Monad m => [String] -> Matrix Text -> Int -> LaTeXT m ()
-theTable colsname xs n = if nrows xs <= n
-                         then do center $ matrixTabular (map underline colsname) xs --acomodar
-                         else do center $ matrixTabular colsname $ submatrix 1 n 1 (ncols xs) xs
-                                 theTable colsname (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) n
+theTable colnames xs repo = if nrows xs <= n
+                            then do center $ matrixTabular2 f_cnames xs tfont tstyle --acomodar
+                         --then do center $ matrixTabular (map underline colsname) xs --acomodar
+                            else do center $ matrixTabular2 f_cnames (submatrix 1 n 1 (ncols xs) xs) tfont tstyle
+                                    theTable colnames (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) repo
+                                where n = get_nrows repo
+                                      f_cnames = map hfont colnames
+                                      hfont = format $ get_colt_font repo
+                                      tfont = get_table_font repo
+                                      tstyle = get_table_style repo
 
-fillMatrix :: [[Maybe String]] -> [[Text]]
-fillMatrix [] = [] 
-fillMatrix (xs:xss) = (map ((T.pack).conv) xs):(fillMatrix xss)
+fillMatrix :: [[Maybe String]] -> [[String]]
+fillMatrix [] = []
+fillMatrix (xs:xss) = (map conv xs):(fillMatrix xss)
 
 conv :: Maybe String -> String
 conv x = fromMaybe "Null" x
@@ -132,7 +131,7 @@ title_stl font size pos (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bst
 {----------------Cuerpo----------------}-}
 --Cambia el contenido del cuerpo
 content :: String -> Repo -> Repo
-content query' (R ttl (C query ts) bstl conn) = R ttl (C query' ts) bstl conn
+content query' (R ttl (C query ts nf tf) bstl conn) = R ttl (C query' ts nf tf) bstl conn
 {-
 --Cambia fuente del cuerpo
 body_font :: String -> Int -> Repo -> Repo
@@ -153,44 +152,110 @@ get_title (R (T ttl _) _ _ _) = if (length ttl') == 0 then "Reporte" else ttl'
 
 get_title_font :: Repo -> PDFFont
 get_title_font (R (T _ (TStyle tfont _)) _ _ _) = tfont
+
+get_colt_font :: Repo -> PDFFont
+get_colt_font (R _ (C _ _ font _) _ _) = font
+
+get_table_font :: Repo -> PDFFont
+get_table_font (R _ (C _ _ _ font) _ _) = font
  
 get_psize :: Repo -> PaperType
-get_psize (R _ _ (PStyle psz _ _ _) _) = psz
+get_psize (R _ _ (PStyle psz _ _) _) = psz
 
 get_pttl :: Repo -> Bool
-get_pttl (R _ _ (PStyle _ _ _ ttl) _) = ttl
+get_pttl (R _ _ (PStyle _ _ ttl) _) = ttl
 
 get_plands :: Repo -> Bool
-get_plands (R _ _ (PStyle _ _ ls _) _) = ls
+get_plands (R _ _ (PStyle _ ls _) _) = ls
 
 get_pfont :: Repo -> PDFFont
-get_pfont (R _ _ (PStyle _ font _ _) _) = font
+get_pfont (R _ (C _ _ font _) _ _) = font
 
 get_query :: Repo -> String
-get_query (R _ (C cont _) _ _) = cont
+get_query (R _ (C cont _ _ _) _ _) = cont
+
+get_table_style :: Repo -> TableStyle
+get_table_style (R _ (C _ ts _ _) _ _) = ts
+
+get_nrows :: Repo -> Int  --Cambiar de acuerdo al tamaño!
+get_nrows repo = 30
+
+format (PDFFont ff fs xs) = (to_ffam ff).(to_fsize fs).(to_fstyles xs)
+    
+matrixTabular2 ts m tfont stl = --probar con intersperse 
+    let spec = vspec (ncols m) stl
+    in case stl of
+           (_,True,_,True) ->
+             tabular Nothing spec $ mconcat
+             [ hline
+             , foldl1 (&) ts
+             , lnbk
+             , hline
+             , mconcat $ fmap (
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+                     , lnbk
+                     , hline
+                     ] ) [1 .. nrows m]
+             ]
+           (_,True,_,False) ->
+              tabular Nothing spec $ mconcat
+             [ hline
+             , foldl1 (&) ts
+             , lnbk
+             , mconcat $ (fmap (
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+                     , lnbk
+                     ] ) [1 .. nrows m])
+             , hline
+             ] 
+           (_,False,_,True) ->
+             tabular Nothing spec $ mconcat $
+             [ foldl1 (&) ts
+             , lnbk
+             , hline
+             , mconcat $ fmap (
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+                     , lnbk
+                     , hline
+                     ] ) [1 .. (nrows m)-1]
+             ] ++ [foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (nrows m,j))) [1 .. ncols m], lnbk]
+           (_,False,_,False) -> 
+             tabular Nothing spec $ mconcat
+             [ foldl1 (&) ts
+             , lnbk
+             , mconcat $ fmap (
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+                     , lnbk
+                     ] ) [1 .. nrows m]
+             ]
+             
+vspec :: Int -> TableStyle -> [TableSpec]
+vspec nc (None, _, None, _) = replicate nc CenterColumn
+vspec nc (None, _, vert, _) =
+  case vert of
+    Vert  -> intersperse VerticalLine $ replicate nc CenterColumn
+    DVert -> intersperse DVerticalLine $ replicate nc CenterColumn
+vspec nc (vert, _, None, _) =
+  case vert of
+    Vert  -> VerticalLine : (replicate nc CenterColumn) ++ [VerticalLine]
+    DVert -> DVerticalLine : (replicate nc CenterColumn) ++ [DVerticalLine]
+vspec nc (vert1, _, vert2, _) =
+  case vert1 of
+    Vert  -> case vert2 of
+               Vert  -> VerticalLine : (intersperse VerticalLine $ replicate nc CenterColumn) ++ [VerticalLine]
+               DVert -> VerticalLine : (intersperse DVerticalLine $ replicate nc CenterColumn) ++ [VerticalLine]
+    DVert -> case vert2 of
+               Vert  -> DVerticalLine : (intersperse VerticalLine $ replicate nc CenterColumn) ++ [DVerticalLine]
+               DVert -> DVerticalLine : (intersperse DVerticalLine $ replicate nc CenterColumn) ++ [DVerticalLine]
 
 
---get_font_size :: PDFFont
---get_font_size  = to_fsize fs
---format_title :: LaTeXC l => Repo -> l -> l
-format_title (PDFFont ff fs xs) = (to_ffam ff).(to_fsize fs).(to_fstyles xs)
 
---to_fsize :: LaTeXC l => Repo -> l -> l
-
-
-{-
-get_Tfsize repo
-
--}
 title_bool :: Repo -> Bool
-title_bool (R _ _ (PStyle _ _ _ st) _)  = st
+title_bool (R _ _ (PStyle _ _ st) _)  = st
 
 lands_bool :: Repo -> Bool
-lands_bool (R _ _ (PStyle _ _ land _) _)  = land
-{-
-change_tstl :: String -> Int -> Position -> TStyle -> TStyle
-change_tstl font size pos _ = TStyle (PDFFont font size) pos
--}
+lands_bool (R _ _ (PStyle _  land _) _)  = land
+
 to_fsize size = case size of
                     Tiny       -> tiny
                     Scriptsize -> scriptsize
