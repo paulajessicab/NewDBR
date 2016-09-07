@@ -50,10 +50,15 @@ initTableStyle = (Vert,True,DVert,True)
 initRepo :: Connection -> Repo
 initRepo conn = R initTitle (C "" initTableStyle defaultFont defaultFont) initPStyle conn
 {-\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////-}
+{-
+connect :: String -> Repo -> Repo
+connect database (R a b c _) = let conn = connectSqlite3 database
+                               in R a b c conn
+-}                           
 
 
 {-/////////////////| Ejecución |\\\\\\\\\\\\\\\\\-}                                      
-generate :: Repo -> IO()
+generate :: Repo -> IO ()
 generate repo@(R _ _ _ conn) = 
     do xs <- catchSql query (\_ -> return Nothing)
        case xs of
@@ -119,29 +124,83 @@ conv x = fromMaybe "Null" x
 
 {----------------Título----------------}
 --Cambia el contenido del título
-newtitle :: String -> Repo -> Repo
-newtitle newttl (R (T ttl stl) cont bstl conn) = R (T newttl stl) cont bstl conn
-{-
---Cambia todo el estilo del título
-title_stl :: String -> Int -> Position -> Repo -> Repo
-title_stl font size pos (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
-                                                            where stl' = change_tstl font size pos stl    
+titleNew :: String -> Repo -> Repo
+titleNew newttl (R (T ttl stl) cont bstl conn) = R (T newttl stl) cont bstl conn
+
+titlePos :: HPos -> Repo -> Repo
+titlePos pos (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
+                                                where stl' = chTitlePos pos stl
+                                                
+chTitlePos :: HPos -> TStyle -> TStyle
+chTitlePos pos' (TStyle font pos) = TStyle font pos'
+
+titleFont :: FontFamily -> Integer -> Repo -> Repo
+titleFont ff n (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
+                                                where stl' = chTitleFont ff n stl
+
+chTitleFont :: FontFamily -> Integer -> TStyle -> TStyle
+chTitleFont ff' 2 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Scriptsize stls) p
+chTitleFont ff' 3 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Footnote stls) p
+chTitleFont ff' 4 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Small stls) p
+chTitleFont ff' 5 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Tiny stls) p
+chTitleFont ff' 6 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Normalsize stls) p
+chTitleFont ff' 7 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large stls) p
+chTitleFont ff' 8 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large2 stls) p
+chTitleFont ff' 9 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large3 stls) p
+chTitleFont ff' 10 (TStyle (PDFFont ff fs stls) p) = TStyle (PDFFont ff' Huge stls) p
+chTitleFont ff' n (TStyle (PDFFont ff fs stls) p) | n < 2  = TStyle (PDFFont ff' Tiny stls) p
+                                                  | n > 10 = TStyle (PDFFont ff' Huge2 stls) p
+
+titleDecor :: [FontStyle] -> Repo -> Repo
+titleDecor ds (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
+                                                where stl' = chTitleDecor ds stl
+                                                
+chTitleDecor :: [FontStyle] -> TStyle -> TStyle
+chTitleDecor styles (TStyle (PDFFont ff fs sts) p) = TStyle (PDFFont ff fs styles) p 
 {--------------------------------------}
 
-{----------------Cuerpo----------------}-}
+{----------------Cuerpo----------------}
 --Cambia el contenido del cuerpo
-content :: String -> Repo -> Repo
-content query' (R ttl (C query ts nf tf) bstl conn) = R ttl (C query' ts nf tf) bstl conn
-{-
---Cambia fuente del cuerpo
-body_font :: String -> Int -> Repo -> Repo
-body_font font size (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz (PDFFont font size)) conn
+query :: String -> Repo -> Repo--ver
+query q' (R ttl (C q ts nf tf) bstl conn) = R ttl (C q' ts nf tf) bstl conn
 
---Cambia tamaño de página
-pagesize :: PaperType -> Repo -> Repo
-pagesize psz' (R ttl cont (BStyle psz bfont) conn) = R ttl cont (BStyle psz' bfont) conn
-{--------------------------------------}
--}
+paperSize :: PaperType -> Repo -> Repo
+paperSize sz (R ttl cont pstl conn) = R ttl cont pstl' conn
+                                        where pstl' = chPaperSize sz pstl
+                                        
+chPaperSize :: PaperType -> PStyle -> PStyle
+chPaperSize sz' (PStyle sz land title) = PStyle sz' land title
+
+paperLands :: Bool -> Repo -> Repo
+paperLands b (R ttl cont pstl conn) = R ttl cont pstl' conn
+                                        where pstl' = chPaperLands b pstl
+                                        
+chPaperLands :: Bool -> PStyle -> PStyle
+chPaperLands b (PStyle sz land title) = PStyle sz b title
+
+paperTitle :: Bool -> Repo -> Repo
+paperTitle b (R ttl cont pstl conn) = R ttl cont pstl' conn
+                                        where pstl' = chPaperTitle b pstl
+                                        
+chPaperTitle :: Bool -> PStyle -> PStyle
+chPaperTitle b (PStyle sz land title) = PStyle sz land b
+
+tableLayout :: Vert -> Bool -> Vert -> Bool -> Repo -> Repo
+tableLayout b0 b1 b2 b3 (R ttl cont pstl conn) = R ttl cont' pstl conn 
+                                                   where cont' = chTableLO b0 b1 b2 b3 cont
+                                                   
+chTableLO :: Vert -> Bool -> Vert -> Bool -> Content -> Content
+chTableLO b0 b1 b2 b3 (C s ts f0 f1) = C s (b0,b1,b2,b3) f0 f1
+
+tableHPos = undefined
+tableBPos = undefined
+tableHFont = undefined
+tableBFont = undefined
+tableHDecor = undefined
+tableBDecor = undefined
+
+{--------------------------------------}      
+
 {-////////////////| Auxiliares |\\\\\\\\\\\\\\\\-}
 get_connection :: Repo -> Connection
 get_connection (R _ _ _ conn) = conn

@@ -14,6 +14,9 @@ import System.Console.Readline --ver
 import Data.Char (toLower) 
 import System.Process
 import Text.LaTeX.Base.Commands(PaperType) --Oculta los valores???
+import Data.Either
+import Parser
+import Text.ParserCombinators.Parsec
 --TODO
 -- Ver excepciones sqlite!!
 -- Usar tablas!!
@@ -33,7 +36,7 @@ import Text.LaTeX.Base.Commands(PaperType) --Oculta los valores???
 
 
 
-           
+main::IO()
 main = do args <- getArgs
           conn <- parse' args
           let newRepo = initRepo conn
@@ -53,13 +56,14 @@ parse' _ = do putStrLn "-- Error: argumento faltante --"
 prompt :: String
 prompt = ">> "
 
+mainloop::Repo->IO ()
 mainloop newRepo = do input <- readline prompt
                       case input of
                             Just c -> do addHistory c --historial de comandos
                                          if (c == "generate")
                                          then do generate newRepo
                                                  mainloop newRepo
-                                         else do newRepo' <- parseCmd (words c) newRepo
+                                         else do newRepo' <- parseInteractive (words c) newRepo
                                                  mainloop newRepo'
                                          where name = get_title newRepo
                             Nothing -> exitWith (ExitFailure 1) ---ver error
@@ -68,18 +72,31 @@ mainloop newRepo = do input <- readline prompt
                  
 {-////////////////| Parser de Comandos |\\\\\\\\\\\\\\\\-}                     
 --Cambiar formato
-parseCmd :: [String] -> Repo -> IO Repo
+parseInteractive :: [String] -> Repo -> IO Repo
 --parseCmd = undefined
-parseCmd ("title":newttl) repo = return (newtitle (unwords newttl) repo)
-parseCmd ("query":newquery) repo = if (h == "SELECT" || h == "select")
-                                   then do return (content (unwords newquery) repo)
-                                   else do print "--Consulta invalida--"
-                                           return repo
-                                        where h = head newquery
-parseCmd ["exit"] repo = do disconnect (get_connection repo)
-                            exitWith ExitSuccess
-parseCmd _ repo = do print "Comando no conocido"
-                     return repo
+parseInteractive ("load":filename) repo = modify (unwords filename) repo
+parseInteractive ("title":newttl) repo = return (titleNew (unwords newttl) repo)
+parseInteractive ("query":newquery) repo = if (h == "SELECT" || h == "select")
+                                           then do return (query (unwords newquery) repo)
+                                           else do print "--Consulta invalida--"
+                                                   return repo
+                                             where h = head newquery
+parseInteractive ["exit"] repo = do disconnect (get_connection repo)
+                                    exitWith ExitSuccess
+parseInteractive _ repo = do print "Comando no conocido"
+                             return repo
+                     
+                     
+                     
+modify :: String -> Repo -> IO Repo
+modify filename repo = do file <- readFile filename
+                          case parse (totParser parseTitle) filename file of
+                              Left e -> putStrLn (show e) >> return repo
+                              Right r -> return $ eval r repo
+
+eval :: (Repo -> Repo) -> Repo -> Repo
+eval p repo = p repo 
+
 {-parseCmd ("pagesize":newsize) repo = case parsePageSize (unwords newsize) of
                                         Just x -> return (pagesize x repo)
                                         Nothing -> do print "--Dimensiones de pagina no validas--"
@@ -102,44 +119,3 @@ parseCmd _ repo = do print "Comando no conocido"
 --parseCmd ["show", "columns"] repo = do print (get_columns repo)
 --                                       return repo 
 {-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
-
-
-{-////////////////| Parsers Auxiliares |\\\\\\\\\\\\\\\\-}    
-   
--- Parser para tamaños de papel
--- TODO: Tamaños arbitrarios con GPaperHeight y GPaperWidth
-parsePageSize :: String -> Maybe PaperType
-parsePageSize sz = case (map toLower sz) of
-                      {- "a0" -> Just A0	 
-                       "a1" -> Just A1	 
-                       "a2" -> Just A2
-                       "a3" -> Just A3	 
-                       "a4" -> Just A4	 
-                       "a5" -> Just A5	 
-                       "a6" -> Just A6	 
-                       "b0" -> Just B0	 
-                       "b1" -> Just B1	 
-                       "b2" -> Just B2	 
-                       "b3" -> Just B3	 
-                       "b4" -> Just B4	 
-                       "b5" -> Just B5	 
-                       "b6" -> Just B6	 
-                       "letter" -> Just Letter	 
-                       "executive" -> Just Executive	 
-                       "legal" -> Just Legal-}
-                       otherwise -> Nothing
-
-{-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
-
-{-
---Font Parser VER
-parseFont :: String -> Font
-parseFont "Arial" = Arial
-parseFont "arial" = Arial
-parseFont "Times" = Times
-parseFont "times" = Times
-
---Position Parser VER
-parsePosition :: String -> Position
-parsePosition _ = PCenter
--}
