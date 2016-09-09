@@ -4,13 +4,13 @@ import Database.HDBC.Sqlite3 (Connection)
 import Data.Bool
 import Data.Maybe(Maybe)
 import Text.LaTeX.Base.Commands(PaperType)
-import Text.LaTeX.Base.Types(HPos)
+import Text.LaTeX.Base.Types(HPos,HPos(HCenter),HPos(HLeft),HPos(HRight))
 {- data Repo = Repo Title Content BStyle Connection
 
 donde:
 * Title contiene información sobre el título del reporte
 * Content es un string que contiene una query SQL
-* BStyle es el estilo del cuerpo del reporte
+* PStyle es el estilo del cuerpo del reporte
 * Connection es la información para conectarse a la base de datos
 -}
 
@@ -18,6 +18,7 @@ data Repo = R Title Content PStyle Connection --Estructura del reporte
 
 data Title = T String TStyle
 
+--Query Bordes FuenteTitulo FuenteCuerpo
 data Content = C String TableStyle PDFFont PDFFont
 
 --ExternalV,ExternalH, InternalV, InternalH
@@ -36,7 +37,7 @@ data PStyle = PStyle PaperType Landscape ShowTitle-- agregar Margins Header Foot
 
 type Landscape = Bool
 type ShowTitle = Bool
---Fuentes
+
 data PDFFont = PDFFont FontFamily FontSize [FontStyle]
     deriving Show
 
@@ -66,30 +67,9 @@ data FontStyle = Normal     --textnormal
                | Upright    --textup ??
                | Underline  --underline
                deriving Show
-
-{-PaperType 
-
-A0	 
-A1	 
-A2	 
-A3	 
-A4	 
-A5	 
-A6	 
-B0	 
-B1	 
-B2	 
-B3	 
-B4	 
-B5	 
-B6	 
-Letter	 
-Executive	 
-Legal
--}
-
-{-HPos
-HCenter
-HLeft
-HRight
+{-
+instance Show HPos where
+   show HCenter = "Centrado"
+   show HLeft   = "Alineacion Izquierda"
+   show HRight  = "Alineacion Derecha"
 -}

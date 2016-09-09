@@ -38,21 +38,19 @@ import Text.ParserCombinators.Parsec
 
 main::IO()
 main = do args <- getArgs
-          conn <- parse' args
+          conn <- parseArg args
           let newRepo = initRepo conn
           hSetBuffering stdout NoBuffering --ver
           mainloop newRepo
 
 --Parser de Argumentos
-
-parse' :: [String] -> IO Connection
-parse' [database] = connectSqlite3 database
-parse' _ = do putStrLn "-- Error: argumento faltante --"
-              putStrLn "Uso: ./Main [database]"
-              exitWith (ExitFailure 1)
+parseArg :: [String] -> IO Connection
+parseArg [database] = connectSqlite3 database
+parseArg _ = do putStrLn "-- Error: argumento faltante --"
+                putStrLn "Uso: ./Main [database]"
+                exitWith (ExitFailure 1)
 
 --Intérprete de Comandos
-
 prompt :: String
 prompt = ">> "
 
@@ -67,55 +65,73 @@ mainloop newRepo = do input <- readline prompt
                                                  mainloop newRepo'
                                          where name = get_title newRepo
                             Nothing -> exitWith (ExitFailure 1) ---ver error
-
-
                  
 {-////////////////| Parser de Comandos |\\\\\\\\\\\\\\\\-}                     
---Cambiar formato
 parseInteractive :: [String] -> Repo -> IO Repo
---parseCmd = undefined
 parseInteractive ("load":filename) repo = modify (unwords filename) repo
-parseInteractive ("title":newttl) repo = return (titleNew (unwords newttl) repo)
-parseInteractive ("query":newquery) repo = if (h == "SELECT" || h == "select")
-                                           then do return (query (unwords newquery) repo)
-                                           else do print "--Consulta invalida--"
-                                                   return repo
-                                             where h = head newquery
+--Obtener datos
+parseInteractive ["show","title"] repo = do print $ get_title repo
+                                            return repo
+parseInteractive ["show","title","font"] repo = do
+                                    print $ (show $ get_title_font repo)
+                                             ++ " " ++
+                                            (show $ get_title_pos repo)
+                                    return repo
+    
+parseInteractive ["show","query"] repo = do print (get_query repo)
+                                            return repo
+                                            
+parseInteractive ["show","table", "layout"] repo = do printLO $ get_layout repo                                             
+                                                      return repo
+                                                                                         
+parseInteractive ["show","table","header","font"] repo = do
+                                            print $ show $ get_table_hfont repo
+                                            return repo
+parseInteractive ["show", "table","body","font"] repo = do 
+                                            print $ show $ get_table_bfont repo
+                                            return repo
+                                            
+parseInteractive ["show","paper","type"] repo = do
+                                             print $ show $ get_paper_size repo
+                                             return repo
+parseInteractive ["show","paper","landscape","status"] repo = do
+                                              print $ get_paper_lands repo
+                                              return repo
+parseInteractive ["show","paper","title","status"] repo = do
+                                              print $ get_paper_title repo
+                                              return repo
+--Salida y error
 parseInteractive ["exit"] repo = do disconnect (get_connection repo)
                                     exitWith ExitSuccess
-parseInteractive _ repo = do print "Comando no conocido"
-                             return repo
+parseInteractive cmd repo =
+                   case parse (totParser parseCmd) "Interactive" (unwords cmd) of
+                      Left e -> putStrLn (show e) >> return repo
+                      Right r -> return $ r repo
+
+printLO :: TableStyle -> IO ()
+printLO (a,b,c,d) = do putStr "Exterior:"
+                       putStr $ printV a
+                       putStr $ printH b
+                       putStr "Interior:"
+                       putStr $ printV c
+                       putStr $ printH d
                      
-                     
+printV :: Vert -> String
+printV None = "Sin bordes verticales"
+printV Vert = "Bordes verticales simples"
+printV DVert = "Bordes verticales doble"
+ 
+printH :: Bool -> String
+printH False = "Sin bordes horizontales"
+printH True  = "Con bordes horizontales"
                      
 modify :: String -> Repo -> IO Repo
 modify filename repo = do file <- readFile filename
-                          case parse (totParser parseTitle) filename file of
+                          case parse (totParser parseCommands) filename file of
                               Left e -> putStrLn (show e) >> return repo
                               Right r -> return $ eval r repo
 
-eval :: (Repo -> Repo) -> Repo -> Repo
-eval p repo = p repo 
-
-{-parseCmd ("pagesize":newsize) repo = case parsePageSize (unwords newsize) of
-                                        Just x -> return (pagesize x repo)
-                                        Nothing -> do print "--Dimensiones de pagina no validas--"
-                                                      print "--Las soportados son ..." --TODO
-                                                      return repo
---Obtener datos
-parseCmd ["show", "title"] repo = do print (get_title repo)
-                                     return repo
---Salida y error
-parseCmd ["exit"] repo = do disconnect (get_connection repo)
-                            exitWith ExitSuccess
-parseCmd _ repo = do print "Comando no conocido"
-                     return repo
--}         
---Obtener datos
---parseCmd ["show", "title", "style"] repo = do print (get_title_stl repo)
---                                              return repo
---parseCmd ["show", "body", "style"] repo = do print (get_body_stl repo)
---                                             return repo
---parseCmd ["show", "columns"] repo = do print (get_columns repo)
---                                       return repo 
+eval :: [(Repo -> Repo)] -> Repo -> Repo
+eval [x] repo    = x repo
+eval (x:xs) repo = eval xs (x repo) 
 {-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}

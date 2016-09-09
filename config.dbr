@@ -1,1 +1,16 @@
-title "amigo mio"
+title Reporte de Generos
+title pos center
+title font mono 7
+title decor underline
+
+query select * from artists
+
+table header font roman 5
+table header decor bold
+table body font roman 4
+table header decor normal
+table layout double true none true
+
+paper a4
+paper set title
+paper unset landscape

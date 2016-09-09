@@ -25,10 +25,10 @@ import Text.LaTeX.Packages.Inputenc
 import Text.LaTeX.Packages.AMSMath
 
 {- TODO
-hacer parser
+hacer parser --v
 arreglar tamaños segun fuentes (hacer funcion que evalue el numero)
 arreglar margenes
-doble linea horizontal??
+ver posicion dentro de tabla
 -}
 
 {-////////////////| Inicialización |\\\\\\\\\\\\\\\\-}
@@ -82,11 +82,8 @@ thePreamble repo = do
     else do documentclass [NoTitlePage] article
     usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
     usepackage [] amsmath
-    importGeometry [GPaper $ get_psize repo]
+    importGeometry [GPaper $ get_paper_size repo]
     date ""
-    -- author "Paula Borrero" booleano para autor?
-    -- fecha bool?
-    --title $ get_Tfsize repo $ fromString $ get_title repo
     title $ fstyle $ fromString $ get_title repo
         where fstyle = format $ get_title_font $ repo
 
@@ -107,9 +104,10 @@ theTable colnames xs repo = if nrows xs <= n
                                     theTable colnames (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) repo
                                 where n = get_nrows repo
                                       f_cnames = map hfont colnames
-                                      hfont = format $ get_colt_font repo
-                                      tfont = get_table_font repo
-                                      tstyle = get_table_style repo
+                                      hfont = format $ get_table_hfont repo
+                                      tfont = get_table_bfont repo
+                                      tstyle = get_layout repo
+--arreglar ultimo salto
 
 fillMatrix :: [[Maybe String]] -> [[String]]
 fillMatrix [] = []
@@ -117,11 +115,9 @@ fillMatrix (xs:xss) = (map conv xs):(fillMatrix xss)
 
 conv :: Maybe String -> String
 conv x = fromMaybe "Null" x
-
 {-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
 
 {-////////////////| Modificación |\\\\\\\\\\\\\\\\-}
-
 {----------------Título----------------}
 --Cambia el contenido del título
 titleNew :: String -> Repo -> Repo
@@ -139,17 +135,8 @@ titleFont ff n (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
                                                 where stl' = chTitleFont ff n stl
 
 chTitleFont :: FontFamily -> Integer -> TStyle -> TStyle
-chTitleFont ff' 2 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Scriptsize stls) p
-chTitleFont ff' 3 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Footnote stls) p
-chTitleFont ff' 4 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Small stls) p
-chTitleFont ff' 5 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Tiny stls) p
-chTitleFont ff' 6 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Normalsize stls) p
-chTitleFont ff' 7 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large stls) p
-chTitleFont ff' 8 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large2 stls) p
-chTitleFont ff' 9 (TStyle (PDFFont ff fs stls) p)  = TStyle (PDFFont ff' Large3 stls) p
-chTitleFont ff' 10 (TStyle (PDFFont ff fs stls) p) = TStyle (PDFFont ff' Huge stls) p
-chTitleFont ff' n (TStyle (PDFFont ff fs stls) p) | n < 2  = TStyle (PDFFont ff' Tiny stls) p
-                                                  | n > 10 = TStyle (PDFFont ff' Huge2 stls) p
+chTitleFont ff' n (TStyle (PDFFont ff fs stls) p) =
+                               TStyle (PDFFont ff' (intToSize n) stls) p
 
 titleDecor :: [FontStyle] -> Repo -> Repo
 titleDecor ds (R (T ttl stl) cont bstl conn) = R (T ttl stl') cont bstl conn
@@ -165,40 +152,59 @@ query :: String -> Repo -> Repo--ver
 query q' (R ttl (C q ts nf tf) bstl conn) = R ttl (C q' ts nf tf) bstl conn
 
 paperSize :: PaperType -> Repo -> Repo
-paperSize sz (R ttl cont pstl conn) = R ttl cont pstl' conn
-                                        where pstl' = chPaperSize sz pstl
+paperSize sz (R ttl cont pstl conn) = R ttl cont (chPaperSize sz pstl) conn
                                         
 chPaperSize :: PaperType -> PStyle -> PStyle
 chPaperSize sz' (PStyle sz land title) = PStyle sz' land title
 
 paperLands :: Bool -> Repo -> Repo
-paperLands b (R ttl cont pstl conn) = R ttl cont pstl' conn
-                                        where pstl' = chPaperLands b pstl
+paperLands b (R ttl cont pstl conn) = R ttl cont (chPaperLands b pstl) conn
                                         
 chPaperLands :: Bool -> PStyle -> PStyle
 chPaperLands b (PStyle sz land title) = PStyle sz b title
 
 paperTitle :: Bool -> Repo -> Repo
-paperTitle b (R ttl cont pstl conn) = R ttl cont pstl' conn
-                                        where pstl' = chPaperTitle b pstl
+paperTitle b (R ttl cont pstl conn) = R ttl cont (chPaperTitle b pstl) conn
                                         
 chPaperTitle :: Bool -> PStyle -> PStyle
 chPaperTitle b (PStyle sz land title) = PStyle sz land b
 
 tableLayout :: Vert -> Bool -> Vert -> Bool -> Repo -> Repo
-tableLayout b0 b1 b2 b3 (R ttl cont pstl conn) = R ttl cont' pstl conn 
-                                                   where cont' = chTableLO b0 b1 b2 b3 cont
+tableLayout b0 b1 b2 b3 (R ttl cont pstl conn) =
+                               R ttl (chTableLO b0 b1 b2 b3 cont) pstl conn 
                                                    
 chTableLO :: Vert -> Bool -> Vert -> Bool -> Content -> Content
 chTableLO b0 b1 b2 b3 (C s ts f0 f1) = C s (b0,b1,b2,b3) f0 f1
 
-tableHPos = undefined
-tableBPos = undefined
-tableHFont = undefined
-tableBFont = undefined
-tableHDecor = undefined
-tableBDecor = undefined
+tableBFont :: FontFamily -> Integer -> Repo -> Repo
+tableBFont ff n (R ttl cont pstl conn) =
+                               R ttl (chTableBFont ff n cont) pstl conn
+      
+chTableBFont :: FontFamily -> Integer -> Content -> Content
+chTableBFont ff n (C str ts (PDFFont ff0 fs0 ds0) f1) = 
+                              C str ts (PDFFont ff (intToSize n) ds0) f1
 
+tableHFont :: FontFamily -> Integer -> Repo -> Repo
+tableHFont ff n (R ttl cont pstl conn) =
+                               R ttl (chTableHFont ff n cont) pstl conn
+                               
+chTableHFont :: FontFamily -> Integer -> Content -> Content
+chTableHFont ff n (C str ts f0 (PDFFont ff1 fs1 ds1)) = 
+                              C str ts f0 (PDFFont ff (intToSize n) ds1)
+    
+tableBDecor :: [FontStyle] -> Repo -> Repo
+tableBDecor ds (R ttl cont pstl conn) = R ttl (chTableBDec ds cont) pstl conn
+
+chTableBDec :: [FontStyle] -> Content -> Content
+chTableBDec ds (C str ts (PDFFont ff0 fs0 ds0) f1) = 
+                                        C str ts (PDFFont ff0 fs0 ds) f1
+
+tableHDecor :: [FontStyle] -> Repo -> Repo
+tableHDecor ds (R ttl cont pstl conn) = R ttl (chTableHDec ds cont) pstl conn
+
+chTableHDec :: [FontStyle] -> Content -> Content
+chTableHDec ds (C str ts f0 (PDFFont ff1 fs1 ds1)) = 
+                                        C str ts f0 (PDFFont ff1 fs1 ds)
 {--------------------------------------}      
 
 {-////////////////| Auxiliares |\\\\\\\\\\\\\\\\-}
@@ -212,29 +218,31 @@ get_title (R (T ttl _) _ _ _) = if (length ttl') == 0 then "Reporte" else ttl'
 get_title_font :: Repo -> PDFFont
 get_title_font (R (T _ (TStyle tfont _)) _ _ _) = tfont
 
-get_colt_font :: Repo -> PDFFont
-get_colt_font (R _ (C _ _ font _) _ _) = font
-
-get_table_font :: Repo -> PDFFont
-get_table_font (R _ (C _ _ _ font) _ _) = font
- 
-get_psize :: Repo -> PaperType
-get_psize (R _ _ (PStyle psz _ _) _) = psz
-
-get_pttl :: Repo -> Bool
-get_pttl (R _ _ (PStyle _ _ ttl) _) = ttl
-
-get_plands :: Repo -> Bool
-get_plands (R _ _ (PStyle _ ls _) _) = ls
-
-get_pfont :: Repo -> PDFFont
-get_pfont (R _ (C _ _ font _) _ _) = font
+get_title_pos :: Repo -> HPos
+get_title_pos (R (T _ (TStyle _ tpos)) _ _ _) = tpos
 
 get_query :: Repo -> String
 get_query (R _ (C cont _ _ _) _ _) = cont
 
-get_table_style :: Repo -> TableStyle
-get_table_style (R _ (C _ ts _ _) _ _) = ts
+get_layout :: Repo -> (Vert,Bool,Vert,Bool)
+get_layout (R _ (C _ tstyle _ _) _ _) = tstyle
+
+get_table_hfont :: Repo -> PDFFont
+get_table_hfont (R _ (C _ _ hfont _) _ _) = hfont
+
+get_table_bfont :: Repo -> PDFFont
+get_table_bfont (R _ (C _ _ _ bfont) _ _) = bfont
+
+get_paper_size :: Repo -> PaperType
+get_paper_size (R _ _ (PStyle psz _ _) _) = psz
+
+get_paper_lands :: Repo -> Landscape
+get_paper_lands (R _ _ (PStyle _ lands _) _) = lands
+
+get_paper_title :: Repo -> ShowTitle
+get_paper_title (R _ _ (PStyle _ _ showtitle) _) = showtitle
+
+-------
 
 get_nrows :: Repo -> Int  --Cambiar de acuerdo al tamaño!
 get_nrows repo = 30
@@ -315,33 +323,42 @@ title_bool (R _ _ (PStyle _ _ st) _)  = st
 lands_bool :: Repo -> Bool
 lands_bool (R _ _ (PStyle _  land _) _)  = land
 
-to_fsize size = case size of
-                    Tiny       -> tiny
-                    Scriptsize -> scriptsize
-                    Footnote   -> footnotesize
-                    Small      -> small
-                    Normalsize -> normalsize
-                    Large      -> large
-                    Large2     -> large2
-                    Large3     -> large3
-                    Huge       -> huge
-                    Huge2      -> huge2
+to_fsize Tiny       = tiny
+to_fsize Scriptsize = scriptsize
+to_fsize Footnote   = footnotesize
+to_fsize Small      = small
+to_fsize Normalsize = normalsize
+to_fsize Large      = large
+to_fsize Large2     = large2
+to_fsize Large3     = large3
+to_fsize Huge       = huge
+to_fsize Huge2      = huge2
 
-to_ffam family = case family of
-                   Roman     -> textrm
-                   SansSerif -> textsf
-                   Mono      -> texttt
+to_ffam Roman     = textrm
+to_ffam SansSerif = textsf
+to_ffam Mono      = texttt 
 
 to_fstyles []     = textnormal
-to_fstyles [x]      = to_fsty x
+to_fstyles [x]    = to_fsty x
 to_fstyles (x:xs) = (to_fsty x).(to_fstyles xs)
                    
-to_fsty style = case style of
-                   Normal    -> textnormal
-                   Medium    -> textmd
-                   Bold      -> textbf
-                   Italic    -> textit
-                   SmallCaps -> textsc
-                   Slanted   -> textsl
-                   Upright   -> textup
-                   Underline -> underline
+to_fsty Normal    = textnormal
+to_fsty Medium    = textmd
+to_fsty Bold      = textbf
+to_fsty Italic    = textit
+to_fsty SmallCaps = textsc
+to_fsty Slanted   = textsl
+to_fsty Upright   = textup
+to_fsty Underline = underline
+
+intToSize :: Integer -> FontSize
+intToSize 2 = Scriptsize
+intToSize 3 = Footnote
+intToSize 4 = Small
+intToSize 5 = Normalsize
+intToSize 6 = Large
+intToSize 7 = Large2
+intToSize 8 = Large3
+intToSize 9 = Huge
+intToSize n | n < 2 = Tiny
+            | n > 9 = Huge2
