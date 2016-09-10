@@ -23,9 +23,6 @@ import Database.HDBC.Sqlite3(Connection, connectSqlite3)
 import Text.ParserCombinators.Parsec(parse)
 
 import Control.Monad (unless)
---TODO
--- Ver excepciones sqlite!!
--- Sacar salida de pdflatex
 
 --Fuentes
 --main interactivo de http://learnyouahaskell.com/input-and-output NO
