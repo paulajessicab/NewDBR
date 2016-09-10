@@ -1,12 +1,14 @@
-module AST where
+module AST(
+
+    module AST
+  
+) where
 
 import Database.HDBC.Sqlite3 (Connection)
-import Data.Bool
-import Data.Maybe(Maybe)
 import Text.LaTeX.Base.Commands(PaperType)
 import Text.LaTeX.Base.Types(HPos,HPos(HCenter),HPos(HLeft),HPos(HRight))
-{- data Repo = Repo Title Content BStyle Connection
 
+{- data Repo = Repo Title Content BStyle Connection
 donde:
 * Title contiene información sobre el título del reporte
 * Content es un string que contiene una query SQL
@@ -18,8 +20,8 @@ data Repo = R Title Content PStyle Connection --Estructura del reporte
 
 data Title = T String TStyle
 
---Query Bordes FuenteTitulo FuenteCuerpo
-data Content = C String TableStyle PDFFont PDFFont
+--Query Bordes FuenteCuerpo FuenteTitulo ColumnasPrimera ColumnasResto
+data Content = C String TableStyle PDFFont PDFFont Integer Integer
 
 --ExternalV,ExternalH, InternalV, InternalH
 type TableStyle = (Vert,Bool,Vert,Bool)
@@ -29,10 +31,10 @@ data Vert = None
           | DVert
     deriving Show
 
-data TStyle = TStyle PDFFont HPos --PDFFont = PDFFont FontName Size
+data TStyle = TStyle PDFFont HPos
     deriving Show
-        
-data PStyle = PStyle PaperType Landscape ShowTitle-- agregar Margins Header FooterBool Landscape TableStyle
+
+data PStyle = PStyle PaperType Landscape ShowTitle
     deriving Show
 
 type Landscape = Bool
@@ -64,12 +66,6 @@ data FontStyle = Normal     --textnormal
                | Italic     --textit
                | SmallCaps  --textsc
                | Slanted    --textsl
-               | Upright    --textup ??
+               | Upright    --textup
                | Underline  --underline
                deriving Show
-{-
-instance Show HPos where
-   show HCenter = "Centrado"
-   show HLeft   = "Alineacion Izquierda"
-   show HRight  = "Alineacion Derecha"
--}

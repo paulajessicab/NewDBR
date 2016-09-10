@@ -1,0 +1,17 @@
+title Reporte de Generos
+title pos left
+title font serif 7
+title decor underline italics bold
+
+query select * from genres
+
+table header font roman 6
+table header decor bold
+table body font roman 6
+table body decor normal
+table layout double true none false
+table rows 40 40
+
+paper a4
+paper set title
+paper unset landscape

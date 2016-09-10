@@ -1,0 +1,17 @@
+title Reporte de Albums
+title pos right
+title font roman 8
+title decor underline
+
+query select * from albums where ArtistId > 200
+
+table header font roman 6
+table header decor underline
+table body font roman 5
+table body decor normal
+table layout single true single true
+table rows 50 60
+
+paper a3
+paper set title
+paper unset landscape

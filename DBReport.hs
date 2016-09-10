@@ -1,35 +1,56 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module DBReport where
+module DBReport(
+  module AST,
+  initRepo,
+  generate,
+  titleNew,
+  titlePos,
+  titleFont,
+  titleDecor,
+  query,
+  paperSize,
+  paperLands,
+  paperTitle,
+  tableLayout,
+  tableRows,
+  tableBFont,
+  tableHFont,
+  tableBDecor,
+  tableHDecor,
+
+  get_connection,
+  get_title,
+  get_title_font,
+  get_title_pos,
+  get_query,
+  get_layout,
+  get_table_hfont,
+  get_table_bfont,
+  get_table_fst,
+  get_table_rest,
+  get_paper_size,
+  get_paper_lands,
+  get_paper_title
+) where
 
 import AST
-import Extra
-import System.Environment
+--sqlite
 import Database.HDBC
-import Database.HDBC.Sqlite3
-import Control.Monad
-import Data.List
-import System.IO
-import System.Process
-
-import Control.Monad.State
-import Data.Bool
-import Control.Exception
-import Data.Maybe
-import Data.Matrix
-import qualified Data.Text as T
+import Database.HDBC.Sqlite3(Connection)
 --latex
 import Text.LaTeX
 import Text.LaTeX.Packages.Geometry
 import Text.LaTeX.Packages.Inputenc
 import Text.LaTeX.Packages.AMSMath
+--sistema
+import System.Process(rawSystem)
+import System.IO.Silently(silence)
 
-{- TODO
-hacer parser --v
-arreglar tamaños segun fuentes (hacer funcion que evalue el numero)
-arreglar margenes
-ver posicion dentro de tabla
--}
+import Data.List(intersperse)
+import Data.Maybe(fromMaybe)
+import Data.Matrix
+import qualified Data.Text as T 
 
 {-////////////////| Inicialización |\\\\\\\\\\\\\\\\-}
 defaultFont :: PDFFont
@@ -47,24 +68,21 @@ initPStyle = PStyle A4 False True
 initTableStyle :: TableStyle
 initTableStyle = (Vert,True,DVert,True)
 
-initRepo :: Connection -> Repo
-initRepo conn = R initTitle (C "" initTableStyle defaultFont defaultFont) initPStyle conn
-{-\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////-}
-{-
-connect :: String -> Repo -> Repo
-connect database (R a b c _) = let conn = connectSqlite3 database
-                               in R a b c conn
--}                           
+initContent :: Content
+initContent = C "" initTableStyle defaultFont defaultFont 80 100
 
+initRepo :: Connection -> Repo
+initRepo conn = R initTitle initContent initPStyle conn
+{-\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////-}
 
 {-/////////////////| Ejecución |\\\\\\\\\\\\\\\\\-}                                      
 generate :: Repo -> IO ()
 generate repo@(R _ _ _ conn) = 
     do xs <- catchSql query (\_ -> return Nothing)
        case xs of
-           Nothing  -> do putStrLn "ERROR: Consulta incorrecta o inexistente"
+           Nothing  -> do putStrLn "<- DBR Error: Consulta incorrecta o inexistente ->"
            Just xs' -> do execLaTeXT (simple repo xs') >>= renderFile (name ++ ".tex")
-                          del <- rawSystem "pdflatex" [name++".tex"] -- "> /dev/null 2>&1"
+                          del <- silence $ rawSystem "pdflatex" [name++".tex"]
                           del' <- rawSystem "rm" [name++".tex", name++".log", name++".aux"]
                           return ()
        where query = nQuickQuery conn (get_query repo) []
@@ -78,43 +96,41 @@ simple repo xs = do
 thePreamble :: Monad m => Repo -> LaTeXT m ()
 thePreamble repo = do
     if lands_bool repo 
-    then do documentclass [NoTitlePage, Landscape] article --arreglar filas
+    then do documentclass [NoTitlePage, Landscape] article
     else do documentclass [NoTitlePage] article
     usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
     usepackage [] amsmath
     importGeometry [GPaper $ get_paper_size repo]
     date ""
-    title $ fstyle $ fromString $ get_title repo
+    title $ titlepos $ fstyle $ fromString $ get_title repo
         where fstyle = format $ get_title_font $ repo
+              titlepos = to_flush $ get_title_pos repo
 
 theBody :: Monad m => Repo -> [[Maybe String]] -> LaTeXT m ()
 theBody repo xs | title_bool repo = do maketitle
                                        print_table
                 | otherwise = do print_table
-                where --print_table = theTable (map (fromString.(T.unpack)) $ head fill) m 30
-                      print_table = theTable colnames m repo
-                      colnames    = map fromString $ head fill
-                      fill        = fillMatrix xs 
-                      m           = (fromLists $ tail fill)
+                where
+                  print_table = theTable colnames m True repo
+                  colnames    = map fromString $ head fill
+                  fill        = fillMatrix xs 
+                  m           = (fromLists $ tail fill)
                       
-theTable colnames xs repo = if nrows xs <= n
-                            then do center $ matrixTabular2 f_cnames xs tfont tstyle --acomodar
-                         --then do center $ matrixTabular (map underline colsname) xs --acomodar
-                            else do center $ matrixTabular2 f_cnames (submatrix 1 n 1 (ncols xs) xs) tfont tstyle
-                                    theTable colnames (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) repo
-                                where n = get_nrows repo
-                                      f_cnames = map hfont colnames
-                                      hfont = format $ get_table_hfont repo
-                                      tfont = get_table_bfont repo
-                                      tstyle = get_layout repo
---arreglar ultimo salto
+theTable colnames xs fstb repo = 
+        if nrows xs <= n
+        then do center $ matrixTabular2 f_cnames xs bfont tstyle
+        else do center $ matrixTabular2 f_cnames (submatrix 1 n 1 (ncols xs) xs) bfont tstyle
+                theTable colnames (submatrix (n+1) (nrows xs) 1 (ncols xs) xs) False repo
+            where n = if fstb then fromIntegral $ get_table_fst repo
+                              else fromIntegral $ get_table_rest repo
+                  f_cnames = map hfont colnames
+                  hfont    = format $ get_table_hfont repo
+                  bfont    = get_table_bfont repo
+                  tstyle   = get_layout repo
 
 fillMatrix :: [[Maybe String]] -> [[String]]
-fillMatrix [] = []
-fillMatrix (xs:xss) = (map conv xs):(fillMatrix xss)
-
-conv :: Maybe String -> String
-conv x = fromMaybe "Null" x
+fillMatrix []       = []
+fillMatrix (xs:xss) = (map (\x->fromMaybe "Null" x) xs):(fillMatrix xss)
 {-\\\\\\\\\\\\\\\\\\\\\\\///////////////////////-}
 
 {-////////////////| Modificación |\\\\\\\\\\\\\\\\-}
@@ -149,7 +165,7 @@ chTitleDecor styles (TStyle (PDFFont ff fs sts) p) = TStyle (PDFFont ff fs style
 {----------------Cuerpo----------------}
 --Cambia el contenido del cuerpo
 query :: String -> Repo -> Repo--ver
-query q' (R ttl (C q ts nf tf) bstl conn) = R ttl (C q' ts nf tf) bstl conn
+query q' (R ttl (C q ts nf tf ri rr) bstl conn) = R ttl (C q' ts nf tf ri rr) bstl conn
 
 paperSize :: PaperType -> Repo -> Repo
 paperSize sz (R ttl cont pstl conn) = R ttl cont (chPaperSize sz pstl) conn
@@ -174,40 +190,46 @@ tableLayout b0 b1 b2 b3 (R ttl cont pstl conn) =
                                R ttl (chTableLO b0 b1 b2 b3 cont) pstl conn 
                                                    
 chTableLO :: Vert -> Bool -> Vert -> Bool -> Content -> Content
-chTableLO b0 b1 b2 b3 (C s ts f0 f1) = C s (b0,b1,b2,b3) f0 f1
+chTableLO b0 b1 b2 b3 (C s ts f0 f1 ri rr) = C s (b0,b1,b2,b3) f0 f1 ri rr
+
+tableRows :: Integer -> Integer -> Repo -> Repo
+tableRows n m (R ttl cont pstl conn) = (R ttl (chTableRows n m cont) pstl conn)
+
+chTableRows :: Integer -> Integer -> Content -> Content
+chTableRows n m (C str ts f0 f1 ri rr) = C str ts f0 f1 n m
 
 tableBFont :: FontFamily -> Integer -> Repo -> Repo
 tableBFont ff n (R ttl cont pstl conn) =
                                R ttl (chTableBFont ff n cont) pstl conn
       
 chTableBFont :: FontFamily -> Integer -> Content -> Content
-chTableBFont ff n (C str ts (PDFFont ff0 fs0 ds0) f1) = 
-                              C str ts (PDFFont ff (intToSize n) ds0) f1
+chTableBFont ff n (C str ts (PDFFont ff0 fs0 ds0) f1 ri rr) = 
+                        C str ts (PDFFont ff (intToSize n) ds0) f1 ri rr
 
 tableHFont :: FontFamily -> Integer -> Repo -> Repo
 tableHFont ff n (R ttl cont pstl conn) =
                                R ttl (chTableHFont ff n cont) pstl conn
                                
 chTableHFont :: FontFamily -> Integer -> Content -> Content
-chTableHFont ff n (C str ts f0 (PDFFont ff1 fs1 ds1)) = 
-                              C str ts f0 (PDFFont ff (intToSize n) ds1)
+chTableHFont ff n (C str ts f0 (PDFFont ff1 fs1 ds1) ri rr) = 
+                        C str ts f0 (PDFFont ff (intToSize n) ds1) ri rr
     
 tableBDecor :: [FontStyle] -> Repo -> Repo
 tableBDecor ds (R ttl cont pstl conn) = R ttl (chTableBDec ds cont) pstl conn
 
 chTableBDec :: [FontStyle] -> Content -> Content
-chTableBDec ds (C str ts (PDFFont ff0 fs0 ds0) f1) = 
-                                        C str ts (PDFFont ff0 fs0 ds) f1
+chTableBDec ds (C str ts (PDFFont ff0 fs0 ds0) f1 ri rr) = 
+                                  C str ts (PDFFont ff0 fs0 ds) f1 ri rr
 
 tableHDecor :: [FontStyle] -> Repo -> Repo
 tableHDecor ds (R ttl cont pstl conn) = R ttl (chTableHDec ds cont) pstl conn
 
 chTableHDec :: [FontStyle] -> Content -> Content
-chTableHDec ds (C str ts f0 (PDFFont ff1 fs1 ds1)) = 
-                                        C str ts f0 (PDFFont ff1 fs1 ds)
-{--------------------------------------}      
+chTableHDec ds (C str ts f0 (PDFFont ff1 fs1 ds1) ri rr) = 
+                                  C str ts f0 (PDFFont ff1 fs1 ds) ri rr
+{-\\\\\\\\\\\\\\\\\\\\\\\\////////////////////////-}
 
-{-////////////////| Auxiliares |\\\\\\\\\\\\\\\\-}
+{-///////////////| Visualizacion |\\\\\\\\\\\\\\\\-}
 get_connection :: Repo -> Connection
 get_connection (R _ _ _ conn) = conn
 
@@ -222,16 +244,22 @@ get_title_pos :: Repo -> HPos
 get_title_pos (R (T _ (TStyle _ tpos)) _ _ _) = tpos
 
 get_query :: Repo -> String
-get_query (R _ (C cont _ _ _) _ _) = cont
+get_query (R _ (C cont _ _ _ _ _) _ _) = cont
 
 get_layout :: Repo -> (Vert,Bool,Vert,Bool)
-get_layout (R _ (C _ tstyle _ _) _ _) = tstyle
+get_layout (R _ (C _ tstyle _ _ _ _) _ _) = tstyle
 
 get_table_hfont :: Repo -> PDFFont
-get_table_hfont (R _ (C _ _ hfont _) _ _) = hfont
+get_table_hfont (R _ (C _ _ _ hfont _ _) _ _) = hfont
 
 get_table_bfont :: Repo -> PDFFont
-get_table_bfont (R _ (C _ _ _ bfont) _ _) = bfont
+get_table_bfont (R _ (C _ _ bfont _ _ _) _ _) = bfont
+
+get_table_fst :: Repo -> Integer
+get_table_fst (R _ (C _ _ _ _ ri _) _ _) = ri
+
+get_table_rest :: Repo -> Integer
+get_table_rest (R _ (C _ _ _ _ _ rr) _ _) = rr
 
 get_paper_size :: Repo -> PaperType
 get_paper_size (R _ _ (PStyle psz _ _) _) = psz
@@ -241,15 +269,23 @@ get_paper_lands (R _ _ (PStyle _ lands _) _) = lands
 
 get_paper_title :: Repo -> ShowTitle
 get_paper_title (R _ _ (PStyle _ _ showtitle) _) = showtitle
+{-\\\\\\\\\\\\\\\\\\\\\\\\////////////////////////-}
 
--------
 
-get_nrows :: Repo -> Int  --Cambiar de acuerdo al tamaño!
-get_nrows repo = 30
+{-/////////////////| Auxiliares |\\\\\\\\\\\\\\\\\-}
+--Versión modificada de quickQuery para incluir los nombres de columnas
 
-format (PDFFont ff fs xs) = (to_ffam ff).(to_fsize fs).(to_fstyles xs)
+nQuickQuery :: IConnection conn => conn -> String -> [SqlValue] -> IO (Maybe [[Maybe String]])
+nQuickQuery conn qrystr args =
+    do sth   <- prepare conn qrystr
+       _     <- execute sth args
+       res   <- sFetchAllRows' sth
+       names <- getColumnNames sth
+       return $ Just $ (map (\str -> Just str) names):res
+
+format (PDFFont ff fs xs) = (to_fstyles xs).(to_fsize fs).(to_ffam ff)
     
-matrixTabular2 ts m tfont stl = --probar con intersperse 
+matrixTabular2 ts m bfont stl = --probar con intersperse 
     let spec = vspec (ncols m) stl
     in case stl of
            (_,True,_,True) ->
@@ -259,7 +295,7 @@ matrixTabular2 ts m tfont stl = --probar con intersperse
              , lnbk
              , hline
              , mconcat $ fmap (
-               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format bfont).fromString) (m ! (i,j))) [1 .. ncols m]
                      , lnbk
                      , hline
                      ] ) [1 .. nrows m]
@@ -270,7 +306,7 @@ matrixTabular2 ts m tfont stl = --probar con intersperse
              , foldl1 (&) ts
              , lnbk
              , mconcat $ (fmap (
-               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format bfont).fromString) (m ! (i,j))) [1 .. ncols m]
                      , lnbk
                      ] ) [1 .. nrows m])
              , hline
@@ -281,17 +317,17 @@ matrixTabular2 ts m tfont stl = --probar con intersperse
              , lnbk
              , hline
              , mconcat $ fmap (
-               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format bfont).fromString) (m ! (i,j))) [1 .. ncols m]
                      , lnbk
                      , hline
                      ] ) [1 .. (nrows m)-1]
-             ] ++ [foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (nrows m,j))) [1 .. ncols m], lnbk]
+             ] ++ [foldl1 (&) $ fmap (\j -> ((format bfont).fromString) (m ! (nrows m,j))) [1 .. ncols m], lnbk]
            (_,False,_,False) -> 
              tabular Nothing spec $ mconcat
              [ foldl1 (&) ts
              , lnbk
              , mconcat $ fmap (
-               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format tfont).fromString) (m ! (i,j))) [1 .. ncols m]
+               \i -> mconcat [ foldl1 (&) $ fmap (\j -> ((format bfont).fromString) (m ! (i,j))) [1 .. ncols m]
                      , lnbk
                      ] ) [1 .. nrows m]
              ]
@@ -341,6 +377,10 @@ to_ffam Mono      = texttt
 to_fstyles []     = textnormal
 to_fstyles [x]    = to_fsty x
 to_fstyles (x:xs) = (to_fsty x).(to_fstyles xs)
+
+to_flush HCenter  = center
+to_flush HLeft    = flushleft
+to_flush HRight   = flushright
                    
 to_fsty Normal    = textnormal
 to_fsty Medium    = textmd

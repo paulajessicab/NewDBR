@@ -1,12 +1,24 @@
-module Parser where
+module Parser(
+ 
+   totParser,
+   parseCommands,
+   parseCmd',
+   module AST,
+   module DBReport
+
+)
+
+where
+
+import AST
+import DBReport
 
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Token
 import Text.Parsec.Language
 import Text.LaTeX.Base.Types(HPos, HPos(HLeft),HPos(HRight),HPos(HCenter))
 import Text.LaTeX.Base.Commands
-import DBReport
-import AST
+
 
 totParser :: Parser a -> Parser a
 totParser p = do 
@@ -38,7 +50,9 @@ parseCmd = try (do reserved untyped "title"
                    return x)
        <|> try (do reserved untyped "query"
                    string "select "
-                   x <- many1 $ choice [(identifier untyped), (string "* ")]--parseQuoted
+                   x <- many1 $ choice [(many1 alphaNum),(string "*"),
+                                       (string ","),(string " "),(string ">"),
+                                       (string "<"),(string "=")]
                    return $ query $ "select "++(unwords x))
        <|> try (do reserved untyped "table"
                    x <- parseTable
@@ -55,7 +69,7 @@ parseTitle = try (do reserved untyped "pos"
                      spaces
                      return $ titlePos p)
          <|> try (do parseFont "title")
-         <|> try (do {x <- many1 (identifier untyped); return $ titleNew $ unwords x})--(do {x <- parseQuoted; return $ titleNew $ unwords x})
+         <|> try (do {x <- many1 (identifier untyped); return $ titleNew $ unwords x})
 
 {--Parser de Estilo de Papel--}
 parsePaper :: Parser (Repo -> Repo)
@@ -113,6 +127,13 @@ parseTable = try (do reserved untyped "header"
                      a3 <- parseBool
                      spaces
                      return $ tableLayout a0 a1 a2 a3)
+         <|> try (do spaces
+                     string "rows"
+                     spaces
+                     n <- natural untyped
+                     spaces
+                     m <- natural untyped
+                     return $ tableRows n m)
 
 {--Parser de Fuentes--}
 parseFont :: String -> Parser (Repo->Repo)
@@ -124,7 +145,7 @@ parseFont w = try (do reserved untyped "font"
                         "header" -> return $ tableHFont x n
                         "body" -> return $ tableBFont x n)
           <|> try (do reserved untyped "decor"
-                      ds <- many1 parseDecor
+                      ds <- many1 parseDecor'
                       case w of
                         "title" -> return $ titleDecor ds
                         "header" -> return $ tableHDecor ds
@@ -137,8 +158,8 @@ parsePos = try (do {string "center"; return HCenter})
 
 parseFontFamily :: Parser FontFamily
 parseFontFamily = try (do {string "roman";spaces; return Roman})
-              <|> try (do {string "serif ";spaces; return SansSerif})
-              <|> try (do {string "mono ";spaces; return Mono})
+              <|> try (do {string "serif";spaces; return SansSerif})
+              <|> try (do {string "mono";spaces; return Mono})
 
 parseDecor :: Parser FontStyle
 parseDecor = try (do {string "normal"; return Normal})

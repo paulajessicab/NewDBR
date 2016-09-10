@@ -1,0 +1,17 @@
+title Reporte de Empleados
+title pos center
+title font roman 5
+title decor underline
+
+query select FirstName, LastName, Title from employees order by FirstName
+
+table header font roman 4
+table header decor bold
+table body font roman 3
+table body decor normal
+table layout none false double false
+table rows 30 40
+
+paper a6
+paper set title
+paper unset landscape

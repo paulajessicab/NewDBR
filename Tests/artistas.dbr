@@ -1,0 +1,17 @@
+title Reporte de Artistas
+title pos left
+title font mono 10
+title decor underline
+
+query select * from artists
+
+table header font roman 9
+table header decor bold
+table body font roman 8
+table body decor normal
+table layout double true none true
+table rows 50 55
+
+paper b3
+paper set title
+paper unset landscape
