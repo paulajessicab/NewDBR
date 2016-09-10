@@ -3,7 +3,7 @@
 
 name:                DBR
 version:             0.1.1.0
-synopsis:            Sqlite3 database reports generator
+synopsis:            Sqlite3 database report generator
 -- description:         
 homepage:            https://github.com/paulajessicab/NewDBR
 license:             PublicDomain
