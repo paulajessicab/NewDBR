@@ -1,0 +1,167 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr, float, graphicx, caption}
+\usepackage{amsmath, amssymb}
+\usepackage{bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{multicol}
+\usepackage{titlesec} 
+
+
+\titleformat{\subsection}[runin]
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}	
+\titleformat{\subsubsection}[runin]
+  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+
+\pagestyle{fancy}
+\renewcommand{\figurename}{Figura}
+\renewcommand\abstractname{\textit{Abstract}}
+\fancyhf{}
+\fancyhead[LE,RO]{\textit{DFS Server}}
+\fancyfoot[RE,CO]{\thepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%CAMBIAR!!
+\title{
+	%Logo UNR
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[scale=1]{unr.png}
+		\label{}
+	\end{figure}
+	% Pie Logo
+	\normalsize
+		\textsc{Universidad Nacional de Rosario}\\	
+		\textsc{Facultad de Ciencias Exactas, Ingeniería y Agrimensura}\\
+		\textit{Licenciatura en Ciencias de la Computación}\\
+		\textit{Análisis de Lenguajes de Programación}\\
+	% Título
+	\vspace{30pt}
+	\hrule{}
+	\vspace{15pt}
+	\huge
+		\textbf{Sistema de archivos distribuído}\\
+	\vspace{15pt}
+	\hrule{}
+	\vspace{30pt}
+	% Alumnos/docentes
+	\begin{multicols}{2}
+	\raggedright
+		\large
+			\textbf{Alumna:}\\
+		\normalsize
+			BORRERO, Paula (P-4415/6)\\
+	\raggedleft
+		\large
+			\textbf{Docente:}\\
+		\normalsize
+			JASKELIOFF, Mauro\\
+	\end{multicols}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\date{}
+\maketitle
+\pagebreak
+\tableofcontents
+\pagebreak
+%----------------------------------------------------------
+\section{Introducción}
+\indent{Una base de datos es una colección organizada de datos.\\}
+Las bases de datos forman parte esencial de casi todas las empresas actuales. Les permite mantener un registro de todos los datos que consideran relevantes. No solo sirven para mantener datos que les permiten cumplir sus funciones diariasa nivel operativo, la disponibilidad de grandes cantidades de información que pueden relacionar y visualizar con relativa facilidad juega un papel importante en la toma de decisiones.\\
+También son usadas ampliamente en investigación e informática para almacenar y gestionar grandes cantidades de datos, así como también para obtener información a partir de ellos.\\
+Un generador de reportes de base de datos permite elegir parte de los datos contenidos en una base para representarlos en un formato más amigable al ojo humano. Esto permite a las personas que tengan que utilizarlos, visualizarlos de un modo prolijo y tan fácil de comprender como los mismos datos lo permitan.\\
+El presente trabajo es un generador de reportes hecho en Haskell para bases de datos SQLite3 que presenta los datos en tablas en formato PDF. Diversos aspectos de la presentación final pueden modificarse antes de generar el PDF, por ejemplo el tamaño de la página, el título, el formato de la tabla, etc.
+	
+\section{Manual}
+	\subsection*{Instalación}
+	
+	\subsection*{Uso\\}
+	El generador de reportes funciona como un intérprete de comandos en una terminal.
+	\subsubsection*{Inicio\\}
+	./DBR \textit{database} donde {database} es el path a una base de datos SQLite 3.
+	\subsubsection*{Comandos disponibles}
+	\begin{itemize}
+	\item Exclusivos del intérprete:
+		\begin{itemize}
+		\item \textbf{load \textit{filename}}\\
+		Carga un archivo de configuración, el mismo sólo puede tener comandos de modificación (los que estan en el punto \textit{De configuración})%label?
+		\item \textbf{show \textit{item}}\\
+		Muestra la configuración actual del elemento \textit{item} donde \textit{item} puede ser:
+			\begin{itemize}
+			\item \textbf{query}: consulta actual.
+			\item \textbf{table layout}: diseño de los bordes de la tabla.
+			\item \textbf{table header font}: fuente de los títulos de las columnas.
+			\item \textbf{table body font}: fuente del resto de las celdas de las columnas.
+			\item \textbf{paper type}: tamaño del papel.
+			\item \textbf{paper landscape status}: determinar si el papel está apaisado o no.
+			\item \textbf{paper title status}: determinar si se muestra el título o no.
+			\item \textbf{title}: contenido del título.
+			\item \textbf{title font}: fuente del título del reporte.
+			\end{itemize}
+		\item \textbf{generate}\\
+		Genera el pdf con el nombre pasado como título. Si no se le pasó ninguno toma el título por defecto. %Ver por defecto
+		\end{itemize} 
+	\item De configuración\\
+	Modifican la configuración de un aspecto particular del reporte actual.
+		\begin{itemize}
+		\item \textbf{query \textit{selectquery}}: Cambia el contenido de la tabla. \textit{selectquery} debe ser una consulta (SELECT) escrita en SQL.
+		\item \textbf{title}\\
+		Modifica el título del reporte en los siguientes aspectos:
+			\begin{itemize}
+			\item \textbf{\textit{titletext}}: contenido del título.	
+			\item \textbf{pos [center, left, right]}: alineación del texto.
+			\item \textbf{font [roman, serif, mono] \textit{tamaño}}: fuente del título, donde \textit{tamaño} es un natural.
+			\item \textbf{decor \textit{d1} \textit{d2} ... \textit{d{n}}}: decoraciones del título. Cada \textit{d{i}} es uno de %TERMINAR
+			\end{itemize}
+		\end{itemize}
+	\end{itemize}
+
+\section{Organización de los Archivos}
+
+\section{Decisiones de Diseño}
+
+\begin{enumerate}
+\item \textbf{¿Qué tipo de base de datos usar?}\\
+En un principio probé con MySQL pero finalmente opté por usar SQLite3 ya que era más portable. De todos modos, por lo que pude probar, no sería demasiado difícil usar lo ya hecho para trabajar con MySQL.
+\item \textbf{¿Qué formato de salida usar?}\\
+En todo momento quise que fuera PDF ya que es un formato portable y se obtienen resultados prolijos y relativamente seguros. %ver
+
+Esta decisión trajo algunos problemas al principio pues estaba usando la biblioteca HPDF para generarlos. La documentación no me ayudó en algunos puntos como generar tablas que se vieran bien y tuve problemas con las unidades de medida y las dimensiones de las cosas. Llegué a imprimir texto alineado pero que no se veía bien.
+Esto me llevó a usar HaTeX para generar, en un paso previo, un archivo LaTeX, ejecutar desde dentro de Haskell pdflatex para convertirlo a pdf y borrar los intermedios.
+En este paso pdflatex me tiraba el resultado de su ejecución a la terminal en donde estaba corriendo el interprete. Esto no quedaba muy bien y lo pude evitar usando la función \textit{silence} de la biblioteca \textit{System.IO.Silently}.
+
+HaTeX no tiene todos los paquetes disponibles para LaTeX entonces esta decisión también afectó el aspecto estético del trabajo ya que el formato final es más restringido del que podría hacer escribiendo directamente el código LaTeX.
+
+\item \textbf{¿Por qué un intérprete?}\\
+Hice un interprete en vez de hacer una biblioteca para Haskell porque quería que pudiera ser usada con relativa facilidad por cualquier persona. Sólo hay que aprenderse unos cuantos comandos para usarlo. De todos modos esto se restringe un poco al pedir que las consultas sean en SQL.
+
+\item \textbf{¿Por qué las consultas son en SQL?}\\
+En un principio pensé en hacer las consultas de forma que no fuera necesario usar SQL, el programa sería el que lo transformara en una consulta. Sin embargo, me pareció que era un trabajo no tan importante ya que las consultas SELECT de SQL no son tan complejas de aprender y me pareció mejor dejar que se pueda usar todo su potencial.
+
+\item \textbf{¿Por qué usar un parser?}\\
+Hice un parser para permitir archivos de configuración que pudieran cargarse. De este modo se pueden guardar las configuraciones que nos gusten y podemos utilizarlas fácilmente en el futuro. Para esto hice un parser usando la biblioteca Parsec.
+\end{enumerate}
+
+\section{Modificaciones posibles}
+Este trabajo tiene muchísimas cosas que se pueden agregar, estas son algunas particularmente interesantes:
+\begin{enumerate}
+\item Extenderlo para otros tipos de bases de datos (por ejemplo MySQL).
+\item Agregar comandos para obtener más información de la base de datos (nombres de tablas/columnas, etc). %capaz lo puedo hacer ahora
+\item Agregarle más características modificables (hay muchas para elegir).
+\item Hacerlo como una biblioteca de Haskell (posiblemente usando una mónada de estado).
+\item Hacer una versión en la que en vez de consultas SQL se usen opciones sencillas (columnas a incluir, restricciones, etc.) que luego puedan ser traducidas a SQL.
+\end{enumerate}
+
+\section{Bibliografía y código de terceros}
+%arreglar
+\begin{itemize}
+\item docs de hatex en hackage
+\item wikibooks latex tables
+\item tps de ALP
+\item parte interactiva
+\end{itemize}
+
+\section{Anexo: Lenguaje del Interprete}
+\end{document}
