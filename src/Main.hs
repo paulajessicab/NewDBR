@@ -46,11 +46,11 @@ parseArg []  = do putStrLn "<- DBR Error: argumento faltante ->"
                   exitWith (ExitFailure 1)
 parseArg dbs = do fileExists <- doesFileExist database
                   if fileExists
-                  then do conn <- connectSqlite3 database
-                          return conn
-                  else do putStrLn "<-DBR Error: DB Inexistente ->"
-                          exitWith (ExitFailure 1)
-                     where database = unwords dbs
+                    then do conn <- connectSqlite3 database
+                            return conn
+                    else do putStrLn "<-DBR Error: DB Inexistente ->"
+                            exitWith (ExitFailure 1)
+                       where database = unwords dbs
 
 --Intérprete de Comandos
 prompt :: String
@@ -61,11 +61,10 @@ mainloop newRepo = do input <- readline prompt
                       case input of
                             Just c -> do addHistory c --historial de comandos
                                          if (c == "generate")
-                                         then do generate newRepo
-                                                 mainloop newRepo
-                                         else do newRepo' <- parseInteractive (words c) newRepo
-                                                 mainloop newRepo'
-                                         where name = get_title newRepo
+                                           then do generate newRepo
+                                                   mainloop newRepo
+                                           else do newRepo' <- parseInteractive (words c) newRepo
+                                                   mainloop newRepo'
                             Nothing -> exitWith (ExitFailure 1)
                  
 {-////////////////| Parser de Comandos Interactivos |\\\\\\\\\\\\\\\\-}                
@@ -73,11 +72,11 @@ parseInteractive :: [String] -> Repo -> IO Repo
 parseInteractive ("load":filename) repo = do 
                     fileExists <- doesFileExist fname
                     if fileExists
-                    then do repo' <- modify fname repo
-                            return repo'
-                    else do putStrLn "<-DBR Error: Archivo Inexistente ->"
-                            return repo
-                       where fname = unwords filename
+                      then do repo' <- modify fname repo
+                              return repo'
+                      else do putStrLn "<-DBR Error: Archivo Inexistente ->"
+                              return repo
+                        where fname = unwords filename
 --Obtener datos
 parseInteractive ["show","title"] repo = do print $ get_title repo
                                             return repo

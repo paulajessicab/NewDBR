@@ -95,9 +95,9 @@ simple repo xs = do
  
 thePreamble :: Monad m => Repo -> LaTeXT m ()
 thePreamble repo = do
-    if lands_bool repo 
-    then do documentclass [NoTitlePage, Landscape] article
-    else do documentclass [NoTitlePage] article
+    if lands_bool repo
+       then do documentclass [NoTitlePage, Landscape] article
+       else do documentclass [NoTitlePage] article
     usepackage [Text.LaTeX.Packages.Inputenc.utf8] inputenc
     usepackage [] amsmath
     importGeometry [GPaper $ get_paper_size repo]
