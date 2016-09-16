@@ -6,19 +6,19 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{multicol}
 \usepackage{titlesec} 
-
+\usepackage{verbatim}
+\usepackage{hyperref}
 
 \titleformat{\subsection}[runin]
   {\normalfont\large\bfseries}{\thesubsection}{1em}{}	
 \titleformat{\subsubsection}[runin]
   {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
-
 \pagestyle{fancy}
 \renewcommand{\figurename}{Figura}
 \renewcommand\abstractname{\textit{Abstract}}
 \fancyhf{}
-\fancyhead[LE,RO]{\textit{DFS Server}}
+\fancyhead[LE,RO]{\textit{DBR}}
 \fancyfoot[RE,CO]{\thepage}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -41,10 +41,10 @@
 	\hrule{}
 	\vspace{15pt}
 	\huge
-		\textbf{Sistema de archivos distribuído}\\
+		\textbf{Generador de Reportes\\de Bases de Datos}\\
 	\vspace{15pt}
 	\hrule{}
-	\vspace{30pt}
+	\vspace{5cm}
 	% Alumnos/docentes
 	\begin{multicols}{2}
 	\raggedright
@@ -68,22 +68,33 @@
 \pagebreak
 %----------------------------------------------------------
 \section{Introducción}
-\indent{Una base de datos es una colección organizada de datos.\\}
-Las bases de datos forman parte esencial de casi todas las empresas actuales. Les permite mantener un registro de todos los datos que consideran relevantes. No solo sirven para mantener datos que les permiten cumplir sus funciones diariasa nivel operativo, la disponibilidad de grandes cantidades de información que pueden relacionar y visualizar con relativa facilidad juega un papel importante en la toma de decisiones.\\
-También son usadas ampliamente en investigación e informática para almacenar y gestionar grandes cantidades de datos, así como también para obtener información a partir de ellos.\\
+Una base de datos es una colección organizada de datos.
+Las bases de datos forman parte esencial de casi todas las empresas actuales. Les permite mantener un registro de todos los datos que consideran relevantes. No solo sirven para mantener datos que les permiten cumplir sus funciones diarias a nivel operativo, la disponibilidad de grandes cantidades de información que pueden relacionar y visualizar con relativa facilidad juega un papel importante en la toma de decisiones.\\
+También son usadas en investigación e informática para almacenar y gestionar grandes cantidades de datos, así como también para obtener información a partir de ellos.\\
 Un generador de reportes de base de datos permite elegir parte de los datos contenidos en una base para representarlos en un formato más amigable al ojo humano. Esto permite a las personas que tengan que utilizarlos, visualizarlos de un modo prolijo y tan fácil de comprender como los mismos datos lo permitan.\\
-El presente trabajo es un generador de reportes hecho en Haskell para bases de datos SQLite3 que presenta los datos en tablas en formato PDF. Diversos aspectos de la presentación final pueden modificarse antes de generar el PDF, por ejemplo el tamaño de la página, el título, el formato de la tabla, etc.
-	
+El presente trabajo es un generador de reportes hecho en Haskell para bases de datos SQLite3 que presenta los datos en tablas en formato PDF. Diversos aspectos de la presentación final pueden modificarse antes de generarlo, por ejemplo el tamaño de la página, el título, el formato de la tabla, etc.
+\newpage
 \section{Manual}
-	\subsection*{Instalación}
-	
+	\subsection*{Instalación\\}
+	Primero se debe instalar:
+	\begin{itemize}
+	\item SQLite3 
+	\item La librería readline (editar líneas de comandos)
+	\item La librería ncurses5 (manejo de la terminal)
+	\end{itemize}
+	Si se cuenta con el sistema de gestión de paquetes apt, todo esto se puede hacer mediante el siguiente comando:\\ \\
+	\texttt{sudo apt-get install sqlite3 libsqlite3-dev libreadline-dev libncurses5-dev}
+	\\ \\
+	Luego hay que posicionarse en la carpeta raíz del proyecto (DBR) y ejecutar:\\
+	\\
+	\texttt{cabal install}
 	\subsection*{Uso\\}
 	El generador de reportes funciona como un intérprete de comandos en una terminal.
 	\subsubsection*{Inicio\\}
 	./DBR \textit{database} donde {database} es el path a una base de datos SQLite 3.
 	\subsubsection*{Comandos disponibles}
 	\begin{itemize}
-	\item Exclusivos del intérprete:
+	\item \underline{Exclusivos del intérprete:}
 		\begin{itemize}
 		\item \textbf{load \textit{filename}}\\
 		Carga un archivo de configuración, el mismo sólo puede tener comandos de modificación (los que estan en el punto \textit{De configuración})%label?
@@ -103,22 +114,85 @@ El presente trabajo es un generador de reportes hecho en Haskell para bases de d
 		\item \textbf{generate}\\
 		Genera el pdf con el nombre pasado como título. Si no se le pasó ninguno toma el título por defecto. %Ver por defecto
 		\end{itemize} 
-	\item De configuración\\
+	\item \underline{De configuración:}\\
 	Modifican la configuración de un aspecto particular del reporte actual.
 		\begin{itemize}
 		\item \textbf{query \textit{selectquery}}: Cambia el contenido de la tabla. \textit{selectquery} debe ser una consulta (SELECT) escrita en SQL.
 		\item \textbf{title}\\
 		Modifica el título del reporte en los siguientes aspectos:
 			\begin{itemize}
-			\item \textbf{\textit{titletext}}: contenido del título.	
+			\item \textbf{\textit{titletext}}: contenido del título. \textit{titletext} debe ser una cadena.
 			\item \textbf{pos [center, left, right]}: alineación del texto.
 			\item \textbf{font [roman, serif, mono] \textit{tamaño}}: fuente del título, donde \textit{tamaño} es un natural.
-			\item \textbf{decor \textit{d1} \textit{d2} ... \textit{d{n}}}: decoraciones del título. Cada \textit{d{i}} es uno de %TERMINAR
+			\item \textbf{decor \textit{d1} \textit{d2} ... \textit{d{n}}}: decoraciones del título.
+			\end{itemize}
+		\item \textbf{table}\\
+		Cambia el diseño de la tabla en los siguientes aspectos:
+			\begin{itemize}
+			\item \textbf{header}: títulos de las columnas.
+				\begin{itemize}
+					\item \textbf{font [roman, serif, mono] \textit{tamaño}}: fuente, donde \textit{tamaño} es un natural.
+					\item \textbf{decor \textit{d1} \textit{d2} ... \textit{d{n}}}: decoraciones.
+				\end{itemize}
+			\item \textbf{body}: cuerpo de la tabla. Continúa igual que \textbf{header}.
+			\item \textbf{rows \textit{fst} \textit{rst}}: número de filas en la tabla de la primer página (\textit{fst}) y en las del resto de las páginas (\textit{rst}). \textit{fst} y \textit{rst} son números enteros.
+			\item \textbf{layout}: contorno de la tabla.
+				\begin{itemize}
+				\item \textit{\textbf{v1 h1 v2 h2}} donde:\\
+				 \textit{v1} son las líneas verticales externas.\\
+ 				 \textit{h1} son las líneas horizontales externas.\\
+ 				 \textit{v2} son las líneas verticales internas.\\
+ 				 \textit{h2} son las líneas horizontales internas.\\
+ 				 Además \textit{vi} es una de:\\
+ 				 \textbf{none}: sin líneas.\\
+ 				 \textbf{single}: líneas simples.\\
+ 				 \textbf{double}: líneas dobles.\\
+ 				 Y \textit{hi} es una de:\\
+ 				 \textbf{false}: sin líneas.\\
+ 				 \textbf{true}: líneas simples.\\
+				\end{itemize}
+			\end{itemize}
+			\item \textbf{paper}\\
+			Cambia el diseño de la página de la siguiente forma:
+			\begin{itemize}
+			\item \textbf{set} \textit{\textbf{label}}: activa banderas de configuración. \textit{label} puede ser:
+			\begin{itemize}
+			\item \textbf{\textit{landscape}}: colocar la hoja en modo apaisado.
+			\item \textbf{\textit{title}}: mostrar título en la primer página.
+			\end{itemize}
+			\item \textbf{unset}: desactiva las banderas que se pueden activar con set.
+			\item \textbf{\textit{size}}: cambiar el tamaño de la hoja. \textit{size} puede ser: \textbf{a0, a1, ..., a6, b0, b1,.., b5, letter} o \textbf{legal}
 			\end{itemize}
 		\end{itemize}
 	\end{itemize}
-
+\newpage
+\underline{Observaciones:}
+\begin{enumerate}
+\item \textit{decor} es una de:
+	\begin{itemize}
+	\item \textbf{normal}: sin decoraciones.
+    \item \textbf{bold}: negrita.
+	\item \textbf{italics}: itálica. 
+	\item \textbf{smallcaps}: versalita.
+	\item \textbf{slanted}: inclinada.
+	\item \textbf{upright}: vertical.
+	\item \textbf{underline}: subrayada.
+	\end{itemize}
+\item Las enumeraciones entre corchetes se usan cuando se debe tomar uno sólo de dichos elementos.
+\end{enumerate}
 \section{Organización de los Archivos}
+La carpeta raíz del trabajo contiene en 3 subcarpetas:\\
+\begin{itemize}
+\item \textbf{src}: Contiene los archivos con código fuente.
+	\begin{itemize}
+	\item \textbf{Main.hs}: Módulo principal, en él se implementa el intérprete.
+	\item \textbf{TTree.hs}: Módulo con el tipo principal de los reportes.
+	\item \textbf{DBReport.hs}: Módulo con las implementaciones de construcción, manipulación y ejecución del DSL, además de funciones para examinar el contenido de un elemento del tipo principal.
+	\item \textbf{Parser.hs}: Módulo que contiene el parser de comandos de modificación.
+	\end{itemize}
+\item \textbf{docs}: Contiene la documentación.
+\item \textbf{tests}: Contiene los casos de prueba. Los mismos se hicieron usando una base de datos de muestra que se encuentra en el archivo \textit{chinook.db}. También hay un archivo llamado \textit{chinook diagram.pdf} en el que se puede ver el diagrama de la base de datos.
+\end{itemize}
 
 \section{Decisiones de Diseño}
 
@@ -126,7 +200,7 @@ El presente trabajo es un generador de reportes hecho en Haskell para bases de d
 \item \textbf{¿Qué tipo de base de datos usar?}\\
 En un principio probé con MySQL pero finalmente opté por usar SQLite3 ya que era más portable. De todos modos, por lo que pude probar, no sería demasiado difícil usar lo ya hecho para trabajar con MySQL.
 \item \textbf{¿Qué formato de salida usar?}\\
-En todo momento quise que fuera PDF ya que es un formato portable y se obtienen resultados prolijos y relativamente seguros. %ver
+En todo momento quise que fuera PDF ya que es un formato portable y se obtienen resultados prolijos. %ver
 
 Esta decisión trajo algunos problemas al principio pues estaba usando la biblioteca HPDF para generarlos. La documentación no me ayudó en algunos puntos como generar tablas que se vieran bien y tuve problemas con las unidades de medida y las dimensiones de las cosas. Llegué a imprimir texto alineado pero que no se veía bien.
 Esto me llevó a usar HaTeX para generar, en un paso previo, un archivo LaTeX, ejecutar desde dentro de Haskell pdflatex para convertirlo a pdf y borrar los intermedios.
@@ -144,6 +218,39 @@ En un principio pensé en hacer las consultas de forma que no fuera necesario us
 Hice un parser para permitir archivos de configuración que pudieran cargarse. De este modo se pueden guardar las configuraciones que nos gusten y podemos utilizarlas fácilmente en el futuro. Para esto hice un parser usando la biblioteca Parsec.
 \end{enumerate}
 
+\section{Sobre el Lenguaje de Dominio Específico}
+Se definió un DSL que manipula el tipo Repo definido en TTree.hs.
+La implementación las operaciones del DSL se encuentran en DBRepo.hs y es la siguiente:
+\begin{itemize}
+\item \textbf{Constructor}:\\
+Construye un elemento con el formato por defecto para la conexión dada.
+\begin{verbatim}
+initRepo :: Connection -> Repo
+\end{verbatim}
+\item \textbf{Manipulación}:
+\begin{verbatim}
+titleNew :: String -> Repo -> Repo
+titlePos :: HPos -> Repo -> Repo
+titleFont :: FontFamily -> Integer -> Repo -> Repo
+titleDecor :: [FontStyle] -> Repo -> Repo
+query :: String -> Repo -> Repo
+paperSize :: PaperType -> Repo -> Repo
+paperLands :: Bool -> Repo -> Repo
+paperTitle :: Bool -> Repo -> Repo
+tableLayout :: Vert -> Bool -> Vert -> Bool -> Repo -> Repo
+tableRows :: Integer -> Integer -> Repo -> Repo
+tableBFont :: FontFamily -> Integer -> Repo -> Repo
+tableHFont :: FontFamily -> Integer -> Repo -> Repo
+tableBDecor :: [FontStyle] -> Repo -> Repo
+tableHDecor :: [FontStyle] -> Repo -> Repo
+\end{verbatim}
+\item \textbf{Ejecución}\\
+Genera el PDF final
+\begin{verbatim}
+generate :: Repo -> IO ()
+\end{verbatim}
+\end{itemize}
+
 \section{Modificaciones posibles}
 Este trabajo tiene muchísimas cosas que se pueden agregar, estas son algunas particularmente interesantes:
 \begin{enumerate}
@@ -157,11 +264,10 @@ Este trabajo tiene muchísimas cosas que se pueden agregar, estas son algunas pa
 \section{Bibliografía y código de terceros}
 %arreglar
 \begin{itemize}
-\item docs de hatex en hackage
-\item wikibooks latex tables
-\item tps de ALP
-\item parte interactiva
+\item \url{http://book.realworldhaskell.org/read/using-databases.html}
+\item \url{https://en.wikibooks.org/wiki/LaTeX/Tables}
+\item \url{http://hackage.haskell.org/package/HaTeX-3.17.0.2/docs}
+\item \url{https://wiki.haskell.org/Tutorials/Programming_Haskell/Argument_handling}
+\item Trabajos prácticos de la materia, sobre todo para el parser.
 \end{itemize}
-
-\section{Anexo: Lenguaje del Interprete}
 \end{document}

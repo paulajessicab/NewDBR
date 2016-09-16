@@ -1,13 +1,13 @@
 module Main(
 
-  module AST,
+  module TTree,
   module Parser,
   module DBReport,
   main
 
 ) where
 
-import AST
+import TTree
 import Parser
 import DBReport
 --sistema
@@ -23,14 +23,6 @@ import Database.HDBC.Sqlite3(Connection, connectSqlite3)
 import Text.ParserCombinators.Parsec(parse)
 
 import Control.Monad (unless)
-
---Fuentes
---main interactivo de http://learnyouahaskell.com/input-and-output NO
---https://wiki.haskell.org/Tutorials/Programming_Haskell/Argument_handling NO
--- TP lis
---https://en.wikibooks.org/wiki/LaTeX/Tables
--- documento geometry
--- http://hackage.haskell.org/package/HaTeX-3.17.0.2/docs/src/Text-LaTeX-Base-Commands.html#ClassOption  -- VER: Special Tables
 
 main::IO()
 main = do args <- getArgs

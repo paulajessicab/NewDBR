@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module DBReport(
-  module AST,
+  module TTree,
   initRepo,
   generate,
   titleNew,
@@ -34,7 +34,7 @@ module DBReport(
   get_paper_title
 ) where
 
-import AST
+import TTree
 --sqlite
 import Database.HDBC
 import Database.HDBC.Sqlite3(Connection)
@@ -164,7 +164,7 @@ chTitleDecor styles (TStyle (PDFFont ff fs sts) p) = TStyle (PDFFont ff fs style
 
 {----------------Cuerpo----------------}
 --Cambia el contenido del cuerpo
-query :: String -> Repo -> Repo--ver
+query :: String -> Repo -> Repo
 query q' (R ttl (C q ts nf tf ri rr) bstl conn) = R ttl (C q' ts nf tf ri rr) bstl conn
 
 paperSize :: PaperType -> Repo -> Repo

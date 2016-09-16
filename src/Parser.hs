@@ -3,14 +3,12 @@ module Parser(
    totParser,
    parseCommands,
    parseCmd',
-   module AST,
+   module TTree,
    module DBReport
 
-)
+)where
 
-where
-
-import AST
+import TTree
 import DBReport
 
 import Text.ParserCombinators.Parsec

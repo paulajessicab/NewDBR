@@ -1,6 +1,6 @@
-module AST(
+module TTree(
 
-    module AST
+    module TTree
   
 ) where
 
